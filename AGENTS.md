@@ -1,0 +1,178 @@
+# AGENTS.md
+
+## 项目概览
+
+这是一个前后端分离的 Nest-Admin-Shadcn 仓库，根目录本身不是可直接运行的 Node 项目，主要包含两个子应用：
+
+- `server`：NestJS 10 后端，TypeORM + MySQL + Redis
+- `admin-shadcn`：React 19 管理端，Vite 8 + TanStack Router + TanStack Query + shadcn/ui
+
+默认面向中国区用户，所有新增或修改的用户可见文案优先使用中文。
+
+## 目录约定
+
+- `server/src`：后端源码
+- `server/src/module/main`：登录、退出、验证码、当前用户、动态路由
+- `server/src/module/system`：系统管理模块，含用户、角色、菜单、部门、岗位、字典、配置、通知、代码生成
+- `server/src/module/monitor`：系统监控模块，含在线用户、登录日志、操作日志、任务、缓存、服务监控
+- `server/src/config/*.yml`：环境配置，按 `NODE_ENV` 映射
+- `server/db/nest-admin.sql`：初始化数据库脚本与示例数据
+- `admin-shadcn/src/routes`：基于文件的前端路由
+- `admin-shadcn/src/features`：按业务域组织的页面与逻辑
+- `admin-shadcn/src/features/auth/lib/page-registry.ts`：后端菜单到前端页面的静态映射表
+- `admin-shadcn/src/lib/request.ts`：统一 Axios 实例
+- `admin-shadcn/src/stores/auth-store.ts`：登录态、菜单上下文、权限上下文
+
+## 启动方式
+
+根目录没有统一脚本，请分别进入子目录执行：
+
+- 后端安装依赖：`cd server && yarn`
+- 后端开发启动：`cd server && yarn start:dev`
+- 前端安装依赖：`cd admin-shadcn && pnpm install`
+- 前端开发启动：`cd admin-shadcn && pnpm dev`
+
+默认端口：
+
+- 后端：`http://localhost:8080`
+- Swagger：`http://localhost:8080/swagger-ui/`
+- 前端：`http://localhost:5173`
+
+前端请求地址来自 `VITE_API_BASE_URL`。如果不设置，默认使用 `/`，这在本地直开 Vite 时通常会打到 5173 自身而不是 8080。联调时优先显式设置：
+
+- `admin-shadcn/.env.local`
+- 内容示例：`VITE_API_BASE_URL=http://localhost:8080`
+
+## 运行前置条件
+
+- MySQL 8，默认开发配置写在 `server/src/config/dev.yml`
+- Redis，默认开发配置也写在 `server/src/config/dev.yml`
+- 初始化数据来自 `server/db/nest-admin.sql`
+
+注意：
+
+- `server/src/config/test.yml` 和 `server/src/config/prod.yml` 被 `.gitignore` 忽略，需要自行创建
+- `server/src/config/dev.yml` 当前包含本地开发凭据示例，不要把真实生产凭据继续硬编码进去
+
+## 关键架构事实
+
+### 1. 后端没有 API 前缀
+
+`server/src/main.ts` 中开发环境 `app.prefix` 为空，接口直接挂在根路径，例如：
+
+- `POST /login`
+- `GET /getInfo`
+- `GET /getRouters`
+- `GET /captchaImage`
+- `GET /system/user/list`
+
+不要想当然加上 `/api`，除非同步改配置和前端请求。
+
+### 2. 登录态依赖 JWT + Redis
+
+- JWT 由 `Authorization: Bearer <token>` 传递
+- `AuthStrategy` 不只校验 JWT，还会检查 Redis 中的登录 token
+- 只改 JWT 逻辑而不处理 Redis，会导致“token 看起来有效但请求仍被判定过期”
+
+### 3. 权限控制是三层
+
+后端全局挂载了：
+
+- `JwtAuthGuard`
+- `RolesGuard`
+- `PermissionGuard`
+
+新增接口时，默认会被鉴权。匿名接口必须显式走现有免登录机制，不要只在前端放开。
+
+### 4. 前端菜单不是纯静态
+
+前端受两套信息共同约束：
+
+- 后端 `GET /getRouters` 返回的菜单树
+- 前端 `admin-shadcn/src/features/auth/lib/page-registry.ts` 中的映射和权限声明
+
+这意味着新增一个后台页面通常至少要同时处理：
+
+1. 后端菜单数据或菜单接口输出
+2. 前端页面路由文件
+3. `page-registry.ts` 映射
+4. 必要时页面内 `PermissionGuard` 权限点
+
+如果只加其中一部分，常见结果是：
+
+- 菜单出现但点击后 403
+- 页面存在但侧边栏不显示
+- 仪表盘提示“待映射菜单”
+
+### 5. `routeTree.gen.ts` 是生成文件
+
+`admin-shadcn/src/routeTree.gen.ts` 由 TanStack Router 生成，不要手工维护。优先修改 `src/routes/**`。
+
+### 6. 以下目录通常不应直接改
+
+- `**/node_modules`
+- `server/dist`
+- `admin-shadcn/dist`
+- `server/public/openApi.json`：运行后会重新生成
+
+## 推荐改动路径
+
+### 新增后端 CRUD 模块
+
+通常按这个顺序看现有模式：
+
+1. 找一个同类模块参考，例如 `server/src/module/system/config`
+2. 补 entity、dto、service、controller、module
+3. 在对应聚合模块注册，例如 `system.module.ts` 或 `monitor.module.ts`
+4. 如需菜单权限，补数据库菜单数据或相应管理入口
+5. 如需前端页面，再补前端 feature、route、registry 映射
+
+### 新增前端后台页面
+
+优先参考已有模式，例如：
+
+- `admin-shadcn/src/features/users`
+- `admin-shadcn/src/features/roles`
+- `admin-shadcn/src/features/configs`
+
+建议顺序：
+
+1. `src/features/<domain>` 下建业务目录
+2. `src/routes/_authenticated/...` 下建路由文件
+3. 在 `page-registry.ts` 中建立菜单路径或组件键映射
+4. 如需接口，补 `src/features/<domain>/api/*.ts`
+5. 如需权限按钮，使用现有 `PermissionGuard`
+
+## 验证建议
+
+后端常用：
+
+- `cd server && yarn build`
+- `cd server && yarn test`
+
+前端常用：
+
+- `cd admin-shadcn && pnpm build`
+- `cd admin-shadcn && pnpm test`
+- `cd admin-shadcn && pnpm lint`
+
+如果只改了路由、权限或菜单映射，至少人工验证：
+
+1. 登录是否成功
+2. 侧边栏是否出现目标菜单
+3. 页面跳转是否命中正确路由
+4. 权限按钮是否按预期显示
+
+## 已确认的本地事实
+
+- 后端开发环境端口是 `8080`
+- 前端开发环境端口是 `5173`
+- Swagger 已启用并写出 OpenAPI 文件
+- 数据库脚本中存在默认管理员数据，初始化密码相关配置为 `123456`
+- 前端包含一套 Clerk 演示路由，但主登录流仍是本仓库后端的账号密码登录
+
+## 文档维护原则
+
+- 保持中文为主，面向仓库协作者而不是外部营销文案
+- 优先写“这个仓库真实怎么工作”，不要写通用模板话术
+- 当发现新的关键联动约束时，优先更新本文件
