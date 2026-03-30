@@ -1,4 +1,4 @@
-# Nest-Admin-Shadcn 并行开发仓库
+# Nest-Admin-Shadcn
 
 这是一个前后端分离的后台管理系统仓库，包含：
 
