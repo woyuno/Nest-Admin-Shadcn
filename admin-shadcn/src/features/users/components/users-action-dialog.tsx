@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { TreeSelect, type TreeSelectNode } from '@/components/tree-select'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
@@ -40,7 +41,6 @@ import {
 import {
   buildUserFormDefaults,
   buildUserSavePayload,
-  flattenDeptOptions,
   type UserFormValues,
 } from '../lib/user-form-contract'
 import { type User } from '../data/schema'
@@ -167,7 +167,15 @@ export function UsersActionDialog({
     },
   })
 
-  const deptOptions = flattenDeptOptions(deptTreeQuery.data ?? [])
+  const deptTreeSelectData: TreeSelectNode[] = (deptTreeQuery.data ?? []).map(function mapDeptNode(
+    node
+  ): TreeSelectNode {
+    return {
+      id: String(node.id),
+      label: node.label,
+      children: (node.children ?? []).map(mapDeptNode),
+    }
+  })
   const roleOptions = (userMetaQuery.data?.roles ?? [])
     .filter((item) => String(item.status ?? '0') === '0')
     .map((item) => ({
@@ -285,14 +293,12 @@ export function UsersActionDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>归属部门</FormLabel>
-                        <SelectDropdown
-                          key={`dept-${field.value}-${deptOptions.length}`}
-                          defaultValue={field.value}
+                        <TreeSelect
+                          key={`dept-${field.value}-${deptTreeSelectData.length}`}
+                          data={deptTreeSelectData}
+                          value={field.value}
                           onValueChange={field.onChange}
                           placeholder='请选择归属部门'
-                          className='w-full'
-                          items={deptOptions}
-                          isControlled
                         />
                         <FormMessage />
                       </FormItem>

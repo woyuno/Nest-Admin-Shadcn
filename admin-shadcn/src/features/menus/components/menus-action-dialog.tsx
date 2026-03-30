@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
+import { TreeSelect, type TreeSelectNode } from '@/components/tree-select'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -35,7 +36,6 @@ import {
 } from '../api/menus'
 import { type Menu } from '../data/schema'
 import { type MenuFormValues } from '../lib/menu-contract'
-import { MenusTreeSelect } from './menus-tree-select'
 
 const formSchema = z
   .object({
@@ -151,6 +151,15 @@ export function MenusActionDialog({
   const menuOptionsTree = (treeOptionsQuery.data ?? []).filter(
     (option) => option.menuId !== currentRow?.menuId
   )
+  const menuTreeSelectData: TreeSelectNode[] = menuOptionsTree.map(function mapMenuNode(
+    node
+  ): TreeSelectNode {
+    return {
+      id: String(node.menuId),
+      label: node.menuName,
+      children: (node.children ?? []).map(mapMenuNode),
+    }
+  })
   const loading = treeOptionsQuery.isLoading || (isEdit && detailQuery.isLoading)
 
   return (
@@ -188,11 +197,12 @@ export function MenusActionDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>上级菜单</FormLabel>
-                    <MenusTreeSelect
-                      data={menuOptionsTree}
+                    <TreeSelect
+                      data={menuTreeSelectData}
                       value={field.value}
                       onValueChange={field.onChange}
                       placeholder='请选择上级菜单'
+                      rootOption={{ label: '主类目', value: '0' }}
                     />
                     <FormMessage />
                   </FormItem>
