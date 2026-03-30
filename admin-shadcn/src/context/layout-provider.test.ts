@@ -7,8 +7,8 @@ import {
 } from './layout-provider'
 
 describe('layout-provider helpers', () => {
-  it('defaults content width to narrow', () => {
-    expect(getDefaultContentWidth()).toBe('narrow')
+  it('defaults content width to wide', () => {
+    expect(getDefaultContentWidth()).toBe('wide')
   })
 
   it('maps layout mode from sidebar and content width state', () => {

@@ -3,13 +3,14 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { Loader2, LogIn, RefreshCw } from 'lucide-react'
+import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 import { fetchCaptcha, fetchCurrentUserInfo, loginByPassword } from '@/features/auth/api/auth'
 import {
   getPostLoginRedirect,
   shouldEnableCaptcha,
 } from '@/features/auth/lib/auth-contract'
+import { getCaptchaActionMode } from './captcha-layout'
 import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -45,6 +46,7 @@ export function UserAuthForm({
   redirectTo,
   ...props
 }: UserAuthFormProps) {
+  const captchaActionMode = getCaptchaActionMode()
   const [isLoading, setIsLoading] = useState(false)
   const [captchaEnabled, setCaptchaEnabled] = useState(false)
   const [captchaImage, setCaptchaImage] = useState('')
@@ -168,7 +170,12 @@ export function UserAuthForm({
                 </FormItem>
               )}
             />
-            <div className='flex flex-col gap-2 pt-6'>
+            <div
+              className={cn(
+                'pt-6',
+                captchaActionMode === 'image-only' && 'flex items-start'
+              )}
+            >
               <button
                 type='button'
                 onClick={() => void loadCaptcha()}
@@ -186,15 +193,6 @@ export function UserAuthForm({
                   </div>
                 )}
               </button>
-              <Button
-                type='button'
-                variant='outline'
-                size='sm'
-                onClick={() => void loadCaptcha()}
-              >
-                <RefreshCw className='size-4' />
-                刷新
-              </Button>
             </div>
           </div>
         )}

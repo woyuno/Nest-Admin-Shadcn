@@ -15,7 +15,7 @@ const LAYOUT_COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
 // Default values
 const DEFAULT_VARIANT = 'inset'
 const DEFAULT_COLLAPSIBLE = 'icon'
-const DEFAULT_CONTENT_WIDTH: ContentWidth = 'narrow'
+const DEFAULT_CONTENT_WIDTH: ContentWidth = 'wide'
 
 export function getDefaultContentWidth() {
   return DEFAULT_CONTENT_WIDTH

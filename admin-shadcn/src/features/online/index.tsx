@@ -1,6 +1,5 @@
 import { getRouteApi } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle } from 'lucide-react'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
@@ -37,10 +36,6 @@ export function OnlineUsers() {
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
         <div>
           <h2 className='text-2xl font-bold tracking-tight'>在线用户</h2>
-          <div className='mt-2 flex items-center gap-2 text-sm text-amber-600'>
-            <AlertTriangle className='size-4' />
-            搜索结果由前端兼容层收敛，不修改后端源码。
-          </div>
         </div>
         <OnlineUsersTable
           data={onlineUsersData.list}

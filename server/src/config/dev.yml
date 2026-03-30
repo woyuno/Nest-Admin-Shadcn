@@ -30,9 +30,9 @@ db:
   mysql:
     host: '127.0.0.1'
     username: 'root'
-    password: 'yehuozhili'
+    password: 'root'
     database: 'nest-admin'
-    port: 3307
+    port: 3306
     charset: 'utf8mb4'
     logger: 'file'
     logging: true
@@ -45,7 +45,7 @@ db:
 # redis 配置
 redis:
   host: 'localhost'
-  password: '*********'
+  password: ''
   port: 6379
   db: 2
   keyPrefix: ''

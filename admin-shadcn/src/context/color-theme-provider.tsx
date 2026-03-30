@@ -5,7 +5,7 @@ export type ColorTheme = 'default' | 'enterprise-blue' | 'teal'
 
 const COLOR_THEME_COOKIE_NAME = 'vite-ui-color-theme'
 const COLOR_THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
-const DEFAULT_COLOR_THEME: ColorTheme = 'default'
+const DEFAULT_COLOR_THEME: ColorTheme = 'teal'
 
 export function getDefaultColorTheme() {
   return DEFAULT_COLOR_THEME

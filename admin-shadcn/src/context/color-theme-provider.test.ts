@@ -7,7 +7,7 @@ import {
 
 describe('color-theme-provider', () => {
   it('uses default theme color preset', () => {
-    expect(getDefaultColorTheme()).toBe('default')
+    expect(getDefaultColorTheme()).toBe('teal')
   })
 
   it('accepts supported color theme presets', () => {
