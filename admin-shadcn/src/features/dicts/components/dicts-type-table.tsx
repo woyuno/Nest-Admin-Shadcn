@@ -1,6 +1,8 @@
 import { Pencil, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
+import { ActiveStatusBadge } from '@/components/status-badge'
 import {
   Table,
   TableBody,
@@ -10,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { PermissionGuard } from '@/features/auth/components/permission-guard'
+import { dictTypeDetailQueryKey, fetchDictTypeDetail } from '../api/dicts'
 import { type DictType } from '../data/schema'
 import { useDicts } from './dicts-provider'
 
@@ -20,6 +23,7 @@ type DictsTypeTableProps = {
 }
 
 export function DictsTypeTable({ rows, isLoading, onSelect }: DictsTypeTableProps) {
+  const queryClient = useQueryClient()
   const { setCurrentTypeRow, setOpen } = useDicts()
 
   return (
@@ -55,7 +59,7 @@ export function DictsTypeTable({ rows, isLoading, onSelect }: DictsTypeTableProp
                   </button>
                 </TableCell>
                 <TableCell>{row.dictType}</TableCell>
-                <TableCell>{row.status === 'active' ? '启用' : '停用'}</TableCell>
+                <TableCell><ActiveStatusBadge status={row.status} /></TableCell>
                 <TableCell>{row.remark || '-'}</TableCell>
                 <TableCell>{format(row.createdAt, 'yyyy-MM-dd HH:mm')}</TableCell>
                 <TableCell>
@@ -65,6 +69,11 @@ export function DictsTypeTable({ rows, isLoading, onSelect }: DictsTypeTableProp
                         variant='ghost'
                         size='sm'
                         onClick={() => {
+                          queryClient.prefetchQuery({
+                            queryKey: dictTypeDetailQueryKey(row.dictId),
+                            queryFn: () => fetchDictTypeDetail(row.dictId),
+                            staleTime: 60 * 1000,
+                          })
                           setCurrentTypeRow(row)
                           setOpen('typeEdit')
                         }}

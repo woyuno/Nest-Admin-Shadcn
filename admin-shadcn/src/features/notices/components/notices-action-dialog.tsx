@@ -5,8 +5,8 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { resolveDialogFormState } from '@/lib/dialog-form-state'
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   createNotice,
   fetchNoticeDetail,
+  noticeDetailQueryKey,
   noticesQueryKey,
   updateNotice,
 } from '../api/notices'
@@ -69,26 +70,31 @@ export function NoticesActionDialog({
   })
 
   const detailQuery = useQuery({
-    queryKey: ['notices', 'detail', currentRow?.noticeId],
+    queryKey: noticeDetailQueryKey(currentRow?.noticeId),
     queryFn: () => fetchNoticeDetail(currentRow!.noticeId),
     enabled: open && isEdit,
+    staleTime: 60 * 1000,
   })
 
   useEffect(() => {
-    if (!open) {
-      form.reset(emptyValues)
-      return
-    }
-
-    if (isEdit) {
-      if (detailQuery.data) {
-        form.reset(detailQuery.data)
-      }
-      return
-    }
-
-    form.reset(emptyValues)
-  }, [detailQuery.data, form, isEdit, open])
+    form.reset(
+      resolveDialogFormState({
+        open,
+        isEdit,
+        emptyValues,
+        detailValues: detailQuery.data,
+        draftValues: currentRow
+          ? {
+              noticeId: currentRow.noticeId,
+              noticeTitle: currentRow.noticeTitle,
+              noticeType: currentRow.noticeType,
+              status: currentRow.status,
+              noticeContent: currentRow.noticeContent,
+            }
+          : undefined,
+      })
+    )
+  }, [currentRow, detailQuery.data, form, isEdit, open])
 
   const saveMutation = useMutation({
     mutationFn: async (values: NoticeFormValues) => {
@@ -104,8 +110,6 @@ export function NoticesActionDialog({
       form.reset(emptyValues)
     },
   })
-
-  const loading = isEdit && detailQuery.isLoading
 
   return (
     <Dialog
@@ -124,18 +128,12 @@ export function NoticesActionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
-          <div className='flex h-48 items-center justify-center text-muted-foreground'>
-            <Loader2 className='me-2 size-4 animate-spin' />
-            正在加载公告信息...
-          </div>
-        ) : (
-          <Form {...form}>
-            <form
-              id='notice-form'
-              onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
-              className='space-y-5'
-            >
+        <Form {...form}>
+          <form
+            id='notice-form'
+            onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
+            className='space-y-5'
+          >
               <div className='grid gap-4 md:grid-cols-2'>
                 <FormField
                   control={form.control}
@@ -214,9 +212,8 @@ export function NoticesActionDialog({
                   </FormItem>
                 )}
               />
-            </form>
-          </Form>
-        )}
+          </form>
+        </Form>
 
         <DialogFooter>
           <Button
@@ -229,7 +226,7 @@ export function NoticesActionDialog({
           <Button
             type='submit'
             form='notice-form'
-            disabled={saveMutation.isPending || loading}
+            disabled={saveMutation.isPending}
           >
             {saveMutation.isPending ? '保存中...' : isEdit ? '保存修改' : '创建公告'}
           </Button>

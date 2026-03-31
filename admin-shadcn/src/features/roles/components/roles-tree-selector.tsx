@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 
@@ -19,6 +19,12 @@ function collectNodeIds(nodes: RoleTreeNode[]): number[] {
   return nodes.flatMap((node) => [node.id, ...collectNodeIds(node.children ?? [])])
 }
 
+function collectTopLevelExpandableIds(nodes: RoleTreeNode[]) {
+  return new Set(
+    nodes.filter((node) => (node.children ?? []).length > 0).map((node) => node.id)
+  )
+}
+
 function collectDescendantIds(node: RoleTreeNode): number[] {
   return [node.id, ...collectNodeIds(node.children ?? [])]
 }
@@ -30,9 +36,18 @@ export function RolesTreeSelector({
   strictMode,
 }: RolesTreeSelectorProps) {
   const allIds = useMemo(() => collectNodeIds(data), [data])
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(
-    () => new Set(allIds)
+  const defaultExpandedIds = useMemo(
+    () => collectTopLevelExpandableIds(data),
+    [data]
   )
+  const checkedIdSet = useMemo(() => new Set(checkedIds), [checkedIds])
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(
+    () => defaultExpandedIds
+  )
+
+  useEffect(() => {
+    setExpandedIds(defaultExpandedIds)
+  }, [defaultExpandedIds])
 
   const setExpandedAll = (expanded: boolean) => {
     setExpandedIds(expanded ? new Set(allIds) : new Set())
@@ -57,7 +72,7 @@ export function RolesTreeSelector({
     nodes.map((node) => {
       const hasChildren = (node.children ?? []).length > 0
       const isExpanded = expandedIds.has(node.id)
-      const isChecked = checkedIds.includes(node.id)
+      const isChecked = checkedIdSet.has(node.id)
 
       return (
         <div key={node.id} className='space-y-1'>

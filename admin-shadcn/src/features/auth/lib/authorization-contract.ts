@@ -1,4 +1,5 @@
 import { type NavGroup } from '@/components/layout/types'
+import { resolveMenuIcon } from '@/features/menus/lib/menu-icon-registry'
 
 export type BackendMenuRoute = {
   path: string
@@ -136,6 +137,7 @@ function collectSidebarItems(
       if (childResult.items.length > 0) {
         items.push({
           title,
+          icon: resolveMenuIcon(menu.meta?.icon),
           items: childResult.items,
         })
         continue
@@ -146,6 +148,7 @@ function collectSidebarItems(
     if (externalUrl) {
       items.push({
         title,
+        icon: resolveMenuIcon(menu.meta?.icon),
         url: externalUrl,
       })
       continue
@@ -161,6 +164,7 @@ function collectSidebarItems(
 
     items.push({
       title,
+      icon: resolveMenuIcon(menu.meta?.icon),
       url: entry.routePath,
     })
     allowedRoutePaths.add(entry.routePath)
@@ -201,6 +205,7 @@ function collectLeafLinks(
     if (externalUrl) {
       items.push({
         title,
+        icon: resolveMenuIcon(menu.meta?.icon),
         url: externalUrl,
       } as NavLinkItem)
       continue
@@ -216,6 +221,7 @@ function collectLeafLinks(
 
     items.push({
       title,
+      icon: resolveMenuIcon(menu.meta?.icon),
       url: entry.routePath,
     } as NavLinkItem)
     allowedRoutePaths.add(entry.routePath)
@@ -260,7 +266,7 @@ export function buildSidebarGroupsFromMenus(
     if (externalUrl) {
       navGroups.push({
         title: '快捷入口',
-        items: [{ title: groupTitle, url: externalUrl }],
+        items: [{ title: groupTitle, icon: resolveMenuIcon(menu.meta?.icon), url: externalUrl }],
       })
       continue
     }
@@ -275,7 +281,7 @@ export function buildSidebarGroupsFromMenus(
 
     navGroups.push({
       title: '快捷入口',
-      items: [{ title: groupTitle, url: entry.routePath }],
+      items: [{ title: groupTitle, icon: resolveMenuIcon(menu.meta?.icon), url: entry.routePath }],
     })
     allowedRoutePaths.add(entry.routePath)
   }

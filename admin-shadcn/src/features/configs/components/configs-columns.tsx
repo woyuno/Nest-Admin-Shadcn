@@ -1,7 +1,7 @@
 import { format } from 'date-fns'
 import { type ColumnDef } from '@tanstack/react-table'
-import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { BooleanBadge } from '@/components/status-badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { LongText } from '@/components/long-text'
 import { cn } from '@/lib/utils'
@@ -71,11 +71,7 @@ export const configsColumns: ColumnDef<Config>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='系统内置' />
     ),
-    cell: ({ row }) => (
-      <Badge variant='outline'>
-        {row.original.configType === 'builtIn' ? '是' : '否'}
-      </Badge>
-    ),
+    cell: ({ row }) => <BooleanBadge value={row.original.configType === 'builtIn'} />,
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
     enableSorting: false,
   },

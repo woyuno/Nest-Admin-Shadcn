@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { DataTablePagination, DataTableToolbar } from '@/components/data-table'
+import { DataTablePagination } from '@/components/data-table'
 import { type NavigateFn, useTableUrlState } from '@/hooks/use-table-url-state'
 import { type Role } from '../data/schema'
 import { DataTableBulkActions } from './data-table-bulk-actions'
@@ -57,6 +57,7 @@ export function RolesTable({
 
   const pageCount = Math.max(1, Math.ceil(total / pagination.pageSize))
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
@@ -82,22 +83,6 @@ export function RolesTable({
 
   return (
     <div className='flex flex-1 flex-col gap-4'>
-      <DataTableToolbar
-        table={table}
-        searchPlaceholder='按角色名称搜索'
-        searchKey='roleName'
-        textFilters={[{ columnId: 'roleKey', placeholder: '按权限字符搜索' }]}
-        filters={[
-          {
-            columnId: 'status',
-            title: '状态',
-            options: [
-              { label: '启用', value: 'active' },
-              { label: '停用', value: 'inactive' },
-            ],
-          },
-        ]}
-      />
       <div className='overflow-hidden rounded-md border'>
         <Table>
           <TableHeader>

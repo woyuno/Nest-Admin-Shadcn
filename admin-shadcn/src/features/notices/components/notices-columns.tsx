@@ -1,7 +1,7 @@
 import { format } from 'date-fns'
 import { type ColumnDef } from '@tanstack/react-table'
-import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { PublishStatusBadge } from '@/components/status-badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { LongText } from '@/components/long-text'
 import { cn } from '@/lib/utils'
@@ -57,11 +57,8 @@ export const noticesColumns: ColumnDef<Notice>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='公告类型' />
     ),
-    cell: ({ row }) => (
-      <Badge variant='outline'>
-        {row.original.noticeType === 'notice' ? '通知' : '公告'}
-      </Badge>
-    ),
+    cell: ({ row }) =>
+      row.original.noticeType === 'announcement' ? '公告' : '通知',
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
     enableSorting: false,
   },
@@ -70,11 +67,7 @@ export const noticesColumns: ColumnDef<Notice>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='状态' />
     ),
-    cell: ({ row }) => (
-      <Badge variant='outline'>
-        {row.original.status === 'published' ? '正常发布' : '停用草稿'}
-      </Badge>
-    ),
+    cell: ({ row }) => <PublishStatusBadge status={row.original.status} />,
     enableSorting: false,
   },
   {

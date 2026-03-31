@@ -1,16 +1,18 @@
-import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { type Row } from '@tanstack/react-table'
+import { DotsHorizontalIcon } from '@radix-ui/react-icons'
+import { useQueryClient } from '@tanstack/react-query'
 import { Trash2, UserPen } from 'lucide-react'
+import { getLayoutMode, useLayout } from '@/context/layout-provider'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useSidebar } from '@/components/ui/sidebar'
 import { PermissionGuard } from '@/features/auth/components/permission-guard'
+import { fetchPostDetail, postDetailQueryKey } from '../api/posts'
 import { type Post } from '../data/schema'
 import { usePosts } from './posts-provider'
 
@@ -19,51 +21,107 @@ type DataTableRowActionsProps = {
 }
 
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
+  const queryClient = useQueryClient()
   const { setOpen, setCurrentRow } = usePosts()
+  const { open } = useSidebar()
+  const { collapsible, contentWidth } = useLayout()
+  const isWideLayout =
+    getLayoutMode({ open, collapsible, contentWidth }) === 'offcanvas'
 
-  return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant='ghost'
-          className='flex h-8 w-8 p-0 data-[state=open]:bg-muted'
-        >
-          <DotsHorizontalIcon className='h-4 w-4' />
-          <span className='sr-only'>打开岗位操作菜单</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align='end' className='w-[160px]'>
-        <PermissionGuard permissions={['system:post:edit']}>
-          <DropdownMenuItem
-            onClick={() => {
-              setCurrentRow(row.original)
-              setOpen('edit')
-            }}
+  if (!isWideLayout) {
+    return (
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant='ghost'
+            className='flex h-8 w-8 p-0 data-[state=open]:bg-muted'
           >
-            编辑
-            <DropdownMenuShortcut>
-              <UserPen size={16} />
-            </DropdownMenuShortcut>
-          </DropdownMenuItem>
-        </PermissionGuard>
-        <PermissionGuard permissions={['system:post:remove']}>
-          <>
-            <DropdownMenuSeparator />
+            <DotsHorizontalIcon className='h-4 w-4' />
+            <span className='sr-only'>更多操作</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align='end' className='w-[160px]'>
+          <PermissionGuard permissions={['system:post:edit']}>
             <DropdownMenuItem
+              onPointerEnter={() => {
+                void queryClient.prefetchQuery({
+                  queryKey: postDetailQueryKey(row.original.postId),
+                  queryFn: () => fetchPostDetail(row.original.postId),
+                  staleTime: 60 * 1000,
+                })
+              }}
+              onClick={() => {
+                void queryClient.prefetchQuery({
+                  queryKey: postDetailQueryKey(row.original.postId),
+                  queryFn: () => fetchPostDetail(row.original.postId),
+                  staleTime: 60 * 1000,
+                })
+                setCurrentRow(row.original)
+                setOpen('edit')
+              }}
+            >
+              <UserPen className='size-4' />
+              编辑
+            </DropdownMenuItem>
+          </PermissionGuard>
+          <PermissionGuard permissions={['system:post:remove']}>
+            <DropdownMenuItem
+              variant='destructive'
               onClick={() => {
                 setCurrentRow(row.original)
                 setOpen('delete')
               }}
-              className='text-red-500!'
             >
+              <Trash2 className='size-4' />
               删除
-              <DropdownMenuShortcut>
-                <Trash2 size={16} />
-              </DropdownMenuShortcut>
             </DropdownMenuItem>
-          </>
-        </PermissionGuard>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          </PermissionGuard>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
+
+  return (
+    <div className='flex flex-wrap items-center gap-1'>
+      <PermissionGuard permissions={['system:post:edit']}>
+        <Button
+          variant='ghost'
+          size='sm'
+          onPointerEnter={() => {
+            void queryClient.prefetchQuery({
+              queryKey: postDetailQueryKey(row.original.postId),
+              queryFn: () => fetchPostDetail(row.original.postId),
+              staleTime: 60 * 1000,
+            })
+          }}
+          onClick={() => {
+            void queryClient.prefetchQuery({
+              queryKey: postDetailQueryKey(row.original.postId),
+              queryFn: () => fetchPostDetail(row.original.postId),
+              staleTime: 60 * 1000,
+            })
+            setCurrentRow(row.original)
+            setOpen('edit')
+          }}
+        >
+          <UserPen className='me-1 size-4' />
+          编辑
+        </Button>
+      </PermissionGuard>
+      <PermissionGuard permissions={['system:post:remove']}>
+        <Button
+          variant='ghost'
+          size='sm'
+          className='text-red-500 hover:text-red-500'
+          onClick={() => {
+            setCurrentRow(row.original)
+            setOpen('delete')
+          }}
+        >
+          <Trash2 className='me-1 size-4' />
+          删除
+        </Button>
+      </PermissionGuard>
+    </div>
   )
 }

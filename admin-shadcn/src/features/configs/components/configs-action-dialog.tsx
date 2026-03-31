@@ -5,8 +5,8 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { resolveDialogFormState } from '@/lib/dialog-form-state'
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input'
 import { SelectDropdown } from '@/components/select-dropdown'
 import { Textarea } from '@/components/ui/textarea'
 import {
+  configDetailQueryKey,
   configsQueryKey,
   createConfig,
   fetchConfigDetail,
@@ -71,26 +72,32 @@ export function ConfigsActionDialog({
   })
 
   const detailQuery = useQuery({
-    queryKey: ['configs', 'detail', currentRow?.configId],
+    queryKey: configDetailQueryKey(currentRow?.configId),
     queryFn: () => fetchConfigDetail(currentRow!.configId),
     enabled: open && isEdit,
+    staleTime: 60 * 1000,
   })
 
   useEffect(() => {
-    if (!open) {
-      form.reset(emptyValues)
-      return
-    }
-
-    if (isEdit) {
-      if (detailQuery.data) {
-        form.reset(detailQuery.data)
-      }
-      return
-    }
-
-    form.reset(emptyValues)
-  }, [detailQuery.data, form, isEdit, open])
+    form.reset(
+      resolveDialogFormState({
+        open,
+        isEdit,
+        emptyValues,
+        detailValues: detailQuery.data,
+        draftValues: currentRow
+          ? {
+              configId: currentRow.configId,
+              configName: currentRow.configName,
+              configKey: currentRow.configKey,
+              configValue: currentRow.configValue,
+              configType: currentRow.configType,
+              remark: currentRow.remark,
+            }
+          : undefined,
+      })
+    )
+  }, [currentRow, detailQuery.data, form, isEdit, open])
 
   const saveMutation = useMutation({
     mutationFn: async (values: ConfigFormValues) => {
@@ -106,8 +113,6 @@ export function ConfigsActionDialog({
       form.reset(emptyValues)
     },
   })
-
-  const loading = isEdit && detailQuery.isLoading
 
   return (
     <Dialog
@@ -126,18 +131,12 @@ export function ConfigsActionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
-          <div className='flex h-48 items-center justify-center text-muted-foreground'>
-            <Loader2 className='me-2 size-4 animate-spin' />
-            正在加载参数信息...
-          </div>
-        ) : (
-          <Form {...form}>
-            <form
-              id='config-form'
-              onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
-              className='space-y-5'
-            >
+        <Form {...form}>
+          <form
+            id='config-form'
+            onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
+            className='space-y-5'
+          >
               <div className='grid gap-4 md:grid-cols-2'>
                 <FormField
                   control={form.control}
@@ -218,9 +217,8 @@ export function ConfigsActionDialog({
                   </FormItem>
                 )}
               />
-            </form>
-          </Form>
-        )}
+          </form>
+        </Form>
 
         <DialogFooter>
           <Button
@@ -233,7 +231,7 @@ export function ConfigsActionDialog({
           <Button
             type='submit'
             form='config-form'
-            disabled={saveMutation.isPending || loading}
+            disabled={saveMutation.isPending}
           >
             {saveMutation.isPending ? '保存中...' : isEdit ? '保存修改' : '创建参数'}
           </Button>

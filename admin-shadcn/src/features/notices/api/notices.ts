@@ -22,6 +22,8 @@ type BackendNoticesListResponse = {
 }
 
 export const noticesQueryKey = ['notices'] as const
+export const noticeDetailQueryKey = (noticeId?: number) =>
+  ['notices', 'detail', noticeId] as const
 
 export async function fetchNotices(search: NoticesSearch) {
   const response = await request.get<ApiEnvelope<BackendNoticesListResponse>>(

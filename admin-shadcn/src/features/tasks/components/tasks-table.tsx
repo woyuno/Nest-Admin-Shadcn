@@ -16,9 +16,9 @@ import { Play, Trash2, Eye, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { type NavigateFn, useTableUrlState } from '@/hooks/use-table-url-state'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { TaskStatusBadge } from '@/components/status-badge'
 import { Switch } from '@/components/ui/switch'
 import {
   Table,
@@ -100,16 +100,6 @@ function TaskStatusSwitch({
   )
 }
 
-function statusBadge(status: TaskItem['status']) {
-  return status === 'active' ? (
-    <Badge className='bg-emerald-100 text-emerald-700 hover:bg-emerald-100'>
-      正常
-    </Badge>
-  ) : (
-    <Badge variant='secondary'>暂停</Badge>
-  )
-}
-
 export function TasksTable({
   data,
   total = data.length,
@@ -165,7 +155,7 @@ export function TasksTable({
       {
         accessorKey: 'status',
         header: '状态标签',
-        cell: ({ row }) => statusBadge(row.original.status),
+        cell: ({ row }) => <TaskStatusBadge status={row.original.status} />,
       },
       {
         id: 'statusSwitch',
@@ -290,6 +280,7 @@ export function TasksTable({
           {
             columnId: 'jobGroup',
             title: '任务组',
+            selectionMode: 'single',
             options: jobGroupOptions.map((item) => ({
               label: item.label,
               value: item.value,
@@ -298,6 +289,7 @@ export function TasksTable({
           {
             columnId: 'status',
             title: '任务状态',
+            selectionMode: 'single',
             options: taskStatusOptions.map((item) => ({
               label: item.label,
               value: item.value,

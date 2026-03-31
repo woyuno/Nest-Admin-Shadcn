@@ -2,6 +2,7 @@ import * as React from 'react'
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
+import { OverlayContainerProvider } from './overlay-container-context'
 
 function AlertDialog({
   ...props
@@ -43,19 +44,27 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
   className,
+  children,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
+  const [containerElement, setContainerElement] = React.useState<HTMLElement | null>(null)
+
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Content
+        ref={setContainerElement}
         data-slot='alert-dialog-content'
         className={cn(
           'fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg',
           className
         )}
         {...props}
-      />
+      >
+        <OverlayContainerProvider container={containerElement}>
+          {children}
+        </OverlayContainerProvider>
+      </AlertDialogPrimitive.Content>
     </AlertDialogPortal>
   )
 }

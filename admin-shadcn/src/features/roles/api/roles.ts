@@ -47,6 +47,11 @@ type BackendRoleDeptTreeResponse = {
 }
 
 export const rolesQueryKey = ['roles'] as const
+export const roleDetailQueryKey = (roleId?: number) =>
+  ['roles', 'detail', roleId] as const
+export const roleMenuTreeQueryKey = (roleId?: number) =>
+  ['roles', 'menu-tree', roleId] as const
+export const roleBaseMenuTreeQueryKey = ['roles', 'menu-tree'] as const
 
 export async function fetchRoles(search: RolesSearch) {
   const response = await request.get<ApiEnvelope<BackendRolesListResponse>>(

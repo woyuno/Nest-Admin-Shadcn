@@ -114,6 +114,7 @@ export function ConfigsTable({
           {
             columnId: 'configType',
             title: '系统内置',
+            selectionMode: 'single',
             options: [
               { label: '是', value: 'builtIn' },
               { label: '否', value: 'custom' },

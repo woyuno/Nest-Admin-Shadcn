@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
+import { ActiveStatusBadge } from '@/components/status-badge'
 import {
   Table,
   TableBody,
@@ -80,7 +81,7 @@ export function DeptsTable({
                   </div>
                 </TableCell>
                 <TableCell>{row.orderNum}</TableCell>
-                <TableCell>{row.status === 'active' ? '启用' : '停用'}</TableCell>
+                <TableCell><ActiveStatusBadge status={row.status} /></TableCell>
                 <TableCell>{row.leader || '-'}</TableCell>
                 <TableCell>{row.phone || '-'}</TableCell>
                 <TableCell>{row.email || '-'}</TableCell>

@@ -1,7 +1,7 @@
 import { format } from 'date-fns'
 import { type ColumnDef } from '@tanstack/react-table'
-import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { ActiveStatusBadge } from '@/components/status-badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { type Role } from '../data/schema'
 import { DataTableRowActions } from './data-table-row-actions'
@@ -63,10 +63,9 @@ export const rolesColumns: ColumnDef<Role>[] = [
       <DataTableColumnHeader column={column} title='状态' />
     ),
     cell: ({ row }) => {
-      const enabled = row.original.status === 'active'
       return (
         <div className='flex items-center gap-3'>
-          <Badge variant='outline'>{enabled ? '启用' : '停用'}</Badge>
+          <ActiveStatusBadge status={row.original.status} />
           <RolesStatusSwitch role={row.original} />
         </div>
       )

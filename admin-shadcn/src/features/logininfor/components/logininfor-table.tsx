@@ -14,8 +14,8 @@ import {
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { type NavigateFn, useTableUrlState } from '@/hooks/use-table-url-state'
-import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { SuccessStatusBadge } from '@/components/status-badge'
 import {
   Table,
   TableBody,
@@ -34,16 +34,6 @@ type LogininforTableProps = {
   search: Record<string, unknown>
   navigate: NavigateFn
   onSelectionChange?: (rows: LogininforItem[]) => void
-}
-
-function statusBadge(status: LogininforItem['status']) {
-  return status === 'success' ? (
-    <Badge className='bg-emerald-100 text-emerald-700 hover:bg-emerald-100'>
-      成功
-    </Badge>
-  ) : (
-    <Badge variant='destructive'>失败</Badge>
-  )
 }
 
 export function LogininforTable({
@@ -92,7 +82,7 @@ export function LogininforTable({
       {
         accessorKey: 'status',
         header: '状态',
-        cell: ({ row }) => statusBadge(row.original.status),
+        cell: ({ row }) => <SuccessStatusBadge status={row.original.status} />,
       },
       {
         accessorKey: 'msg',
@@ -183,6 +173,7 @@ export function LogininforTable({
           {
             columnId: 'status',
             title: '状态',
+            selectionMode: 'single',
             options: [
               { label: '成功', value: 'success' },
               { label: '失败', value: 'error' },

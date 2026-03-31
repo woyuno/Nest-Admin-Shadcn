@@ -30,6 +30,10 @@ type BackendListResponse<T> = {
 }
 
 export const dictsQueryKey = ['dicts'] as const
+export const dictTypeDetailQueryKey = (dictId?: number) =>
+  ['dicts', 'type-detail', dictId] as const
+export const dictDataDetailQueryKey = (dictCode?: number) =>
+  ['dicts', 'data-detail', dictCode] as const
 
 export async function fetchDictTypes(search: DictTypeSearch) {
   const response = await request.get<ApiEnvelope<BackendListResponse<BackendDictTypeItem>>>(

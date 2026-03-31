@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { Settings, Users } from 'lucide-react'
 import {
   buildSidebarGroupsFromMenus,
   canAccessRoute,
@@ -63,16 +64,49 @@ describe('authorization-contract', () => {
     expect(result.navGroups).toEqual([
       {
         title: '首页',
-        items: [{ title: '工作台', url: '/' }],
+        items: [{ title: '工作台', icon: null, url: '/' }],
       },
       {
         title: '系统管理',
-        items: [{ title: '用户管理', url: '/system/user' }],
+        items: [{ title: '用户管理', icon: null, url: '/system/user' }],
       },
     ])
     expect(result.warnings).toEqual([
       '未找到后端菜单映射: 角色管理 (/system/role) -> system/role/index',
     ])
+  })
+
+  it('maps menu icon keys to sidebar icon components', () => {
+    const menus: BackendMenuRoute[] = [
+      {
+        path: '/system',
+        component: 'Layout',
+        meta: { title: '系统管理', icon: 'system' },
+        children: [
+          {
+            path: 'user',
+            component: 'system/user/index',
+            meta: { title: '用户管理', icon: 'user' },
+          },
+        ],
+      },
+      {
+        path: '/index',
+        component: 'dashboard/index',
+        meta: { title: '首页', icon: 'system' },
+      },
+    ]
+
+    const result = buildSidebarGroupsFromMenus(menus, registry)
+
+    expect(result.navGroups[0].items[0]).toMatchObject({
+      title: '用户管理',
+      icon: Users,
+    })
+    expect(result.navGroups[1].items[0]).toMatchObject({
+      title: '首页',
+      icon: Settings,
+    })
   })
 
   it('maps external backend menu links without warnings', () => {
@@ -91,6 +125,7 @@ describe('authorization-contract', () => {
         title: '快捷入口',
         items: [
           {
+            icon: null,
             title: 'nest-admin官网',
             url: 'https://nest-admin.dooring.vip',
           },

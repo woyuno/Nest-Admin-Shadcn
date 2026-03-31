@@ -16,6 +16,11 @@ type BackendUserListItem = {
   email?: string
   phonenumber?: string
   status: '0' | '1'
+  roles?: Array<{
+    roleId: number
+    roleName?: string
+    status?: string | number
+  }>
   dept?: {
     deptName?: string
   } | null
@@ -80,6 +85,10 @@ export function buildExportUsersPayload(search: UsersSearch) {
 
 export function mapBackendUserListItem(user: BackendUserListItem) {
   const role = user.userId === 1 ? 'superadmin' : 'admin'
+  const roleNames = (user.roles ?? [])
+    .map((item) => item.roleName?.trim())
+    .filter((item): item is string => Boolean(item))
+    .join('、')
 
   return {
     id: String(user.userId),
@@ -93,6 +102,7 @@ export function mapBackendUserListItem(user: BackendUserListItem) {
     email: user.email || '-',
     phoneNumber: user.phonenumber || '-',
     phonenumber: user.phonenumber || '-',
+    roleNames: roleNames || '-',
     status: user.status === '0' ? 'active' : 'inactive',
     role,
     createdAt: normalizeDate(user.createTime),

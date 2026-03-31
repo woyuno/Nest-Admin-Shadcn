@@ -44,6 +44,10 @@ describe('user-contract', () => {
         phonenumber: '13800138000',
         status: '0',
         dept: { deptName: '研发部' },
+        roles: [
+          { roleId: 1, roleName: '超级管理员' },
+          { roleId: 2, roleName: '测试角色' },
+        ],
         createTime: '2026-03-30 10:00:00',
       })
     ).toMatchObject({
@@ -54,6 +58,7 @@ describe('user-contract', () => {
       email: 'admin@example.com',
       phonenumber: '13800138000',
       deptName: '研发部',
+      roleNames: '超级管理员、测试角色',
       status: 'active',
     })
   })

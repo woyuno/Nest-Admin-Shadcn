@@ -5,8 +5,8 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { resolveDialogFormState } from '@/lib/dialog-form-state'
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,7 @@ import { SelectDropdown } from '@/components/select-dropdown'
 import { Textarea } from '@/components/ui/textarea'
 import {
   createDictData,
+  dictDataDetailQueryKey,
   dictsQueryKey,
   fetchDictDataDetail,
   updateDictData,
@@ -79,29 +80,39 @@ export function DictDataActionDialog({
   })
 
   const detailQuery = useQuery({
-    queryKey: ['dicts', 'data-detail', currentRow?.dictCode],
+    queryKey: dictDataDetailQueryKey(currentRow?.dictCode),
     queryFn: () => fetchDictDataDetail(currentRow!.dictCode),
     enabled: open && isEdit,
+    staleTime: 60 * 1000,
   })
 
   useEffect(() => {
-    if (!open) {
-      form.reset(emptyValues)
-      return
-    }
-
-    if (isEdit) {
-      if (detailQuery.data) {
-        form.reset(detailQuery.data)
-      }
-      return
-    }
-
-    form.reset({
-      ...emptyValues,
-      dictType: selectedType?.dictType ?? '',
-    })
-  }, [detailQuery.data, form, isEdit, open, selectedType])
+    form.reset(
+      resolveDialogFormState({
+        open,
+        isEdit,
+        emptyValues,
+        detailValues: detailQuery.data,
+        draftValues: currentRow
+          ? {
+              dictCode: currentRow.dictCode,
+              dictSort: currentRow.dictSort,
+              dictLabel: currentRow.dictLabel,
+              dictValue: currentRow.dictValue,
+              dictType: currentRow.dictType,
+              cssClass: currentRow.cssClass,
+              listClass: currentRow.listClass,
+              status: currentRow.status,
+              remark: currentRow.remark,
+            }
+          : undefined,
+        createValues: {
+          ...emptyValues,
+          dictType: selectedType?.dictType ?? '',
+        },
+      })
+    )
+  }, [currentRow, detailQuery.data, form, isEdit, open, selectedType])
 
   const saveMutation = useMutation({
     mutationFn: async (values: DictDataFormValues) => {
@@ -118,8 +129,6 @@ export function DictDataActionDialog({
     },
   })
 
-  const loading = isEdit && detailQuery.isLoading
-
   return (
     <Dialog open={open} onOpenChange={(state) => !saveMutation.isPending && onOpenChange(state)}>
       <DialogContent className='sm:max-w-2xl'>
@@ -130,18 +139,12 @@ export function DictDataActionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
-          <div className='flex h-48 items-center justify-center text-muted-foreground'>
-            <Loader2 className='me-2 size-4 animate-spin' />
-            正在加载字典数据...
-          </div>
-        ) : (
-          <Form {...form}>
-            <form
-              id='dict-data-form'
-              onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
-              className='space-y-5'
-            >
+        <Form {...form}>
+          <form
+            id='dict-data-form'
+            onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
+            className='space-y-5'
+          >
               <div className='grid gap-4 md:grid-cols-2'>
                 <FormField
                   control={form.control}
@@ -283,15 +286,14 @@ export function DictDataActionDialog({
                   </FormItem>
                 )}
               />
-            </form>
-          </Form>
-        )}
+          </form>
+        </Form>
 
         <DialogFooter>
           <Button variant='outline' onClick={() => onOpenChange(false)} disabled={saveMutation.isPending}>
             取消
           </Button>
-          <Button type='submit' form='dict-data-form' disabled={saveMutation.isPending || loading}>
+          <Button type='submit' form='dict-data-form' disabled={saveMutation.isPending}>
             {saveMutation.isPending ? '保存中...' : isEdit ? '保存修改' : '创建字典数据'}
           </Button>
         </DialogFooter>

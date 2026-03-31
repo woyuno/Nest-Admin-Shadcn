@@ -1,10 +1,17 @@
 import { useState } from 'react'
 import { Edit, FileDown, Trash2, UserRoundPlus } from 'lucide-react'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { PermissionGuard } from '@/features/auth/components/permission-guard'
 import { downloadBlob } from '@/lib/download-blob'
-import { exportRoles } from '../api/roles'
+import {
+  exportRoles,
+  fetchRoleDetail,
+  fetchRoleMenuTree,
+  roleDetailQueryKey,
+  roleMenuTreeQueryKey,
+} from '../api/roles'
 import { type Role } from '../data/schema'
 import { type RolesSearch } from '../lib/role-contract'
 import { RolesMultiDeleteDialog } from './roles-multi-delete-dialog'
@@ -22,6 +29,7 @@ export function RolesPrimaryButtons({
   onClearSelection,
 }: RolesPrimaryButtonsProps) {
   const { setOpen, setCurrentRow } = useRoles()
+  const queryClient = useQueryClient()
   const [isExporting, setIsExporting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const selectedCount = selectedRoles.length
@@ -44,6 +52,16 @@ export function RolesPrimaryButtons({
       return
     }
 
+    void queryClient.prefetchQuery({
+      queryKey: roleDetailQueryKey(singleSelectedRole.roleId),
+      queryFn: () => fetchRoleDetail(singleSelectedRole.roleId),
+      staleTime: 60_000,
+    })
+    void queryClient.prefetchQuery({
+      queryKey: roleMenuTreeQueryKey(singleSelectedRole.roleId),
+      queryFn: () => fetchRoleMenuTree(singleSelectedRole.roleId),
+      staleTime: 60_000,
+    })
     setCurrentRow(singleSelectedRole)
     setOpen('edit')
   }

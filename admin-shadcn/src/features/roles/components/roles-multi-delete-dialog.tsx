@@ -1,17 +1,11 @@
 'use client'
 
-import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { deleteRoles, rolesQueryKey } from '../api/roles'
 import { type Role } from '../data/schema'
-
-const CONFIRM_WORD = 'DELETE'
 
 type RolesMultiDeleteDialogProps = {
   open: boolean
@@ -26,7 +20,6 @@ export function RolesMultiDeleteDialog({
   selectedRoles,
   onDeleted,
 }: RolesMultiDeleteDialogProps) {
-  const [value, setValue] = useState('')
   const queryClient = useQueryClient()
 
   const mutation = useMutation({
@@ -47,7 +40,6 @@ export function RolesMultiDeleteDialog({
       open={open}
       onOpenChange={onOpenChange}
       handleConfirm={() => mutation.mutate()}
-      disabled={value.trim() !== CONFIRM_WORD}
       isLoading={mutation.isPending}
       title={
         <span className='text-destructive'>
@@ -61,18 +53,6 @@ export function RolesMultiDeleteDialog({
             <br />
             删除后无法恢复。
           </p>
-          <Label className='my-4 flex flex-col items-start gap-1.5'>
-            <span>请输入 "{CONFIRM_WORD}" 进行确认：</span>
-            <Input
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder={`请输入 "${CONFIRM_WORD}" 以确认删除`}
-            />
-          </Label>
-          <Alert variant='destructive'>
-            <AlertTitle>风险提示</AlertTitle>
-            <AlertDescription>请谨慎操作，该删除不可回滚。</AlertDescription>
-          </Alert>
         </div>
       }
       cancelBtnText='取消'

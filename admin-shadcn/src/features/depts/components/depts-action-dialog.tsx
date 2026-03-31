@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { TreeSelect, type TreeSelectNode } from '@/components/tree-select'
 import {
   Dialog,
   DialogContent,
@@ -34,7 +35,7 @@ import {
   updateDept,
 } from '../api/depts'
 import { type Dept } from '../data/schema'
-import { type DeptFormValues, flattenDeptOptions } from '../lib/dept-contract'
+import { type DeptFormValues } from '../lib/dept-contract'
 
 const formSchema = z.object({
   deptId: z.number().optional(),
@@ -76,6 +77,7 @@ export function DeptsActionDialog({
 }: DeptsActionDialogProps) {
   const isEdit = !!currentRow?.deptId
   const queryClient = useQueryClient()
+  const deptNameInputRef = useRef<HTMLInputElement | null>(null)
   const form = useForm<DeptFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: emptyValues,
@@ -130,10 +132,15 @@ export function DeptsActionDialog({
     },
   })
 
-  const deptOptions = [
-    { label: '顶级部门', value: '0' },
-    ...flattenDeptOptions(treeOptionsQuery.data ?? []),
-  ]
+  const deptTreeSelectData: TreeSelectNode[] = (treeOptionsQuery.data ?? []).map(function mapDeptNode(
+    node
+  ): TreeSelectNode {
+    return {
+      id: String(node.deptId),
+      label: node.deptName,
+      children: (node.children ?? []).map(mapDeptNode),
+    }
+  })
   const loading = treeOptionsQuery.isLoading || (isEdit && detailQuery.isLoading)
 
   return (
@@ -145,7 +152,13 @@ export function DeptsActionDialog({
         }
       }}
     >
-      <DialogContent className='sm:max-w-2xl'>
+      <DialogContent
+        className='sm:max-w-2xl'
+        onOpenAutoFocus={(event) => {
+          event.preventDefault()
+          deptNameInputRef.current?.focus()
+        }}
+      >
         <DialogHeader className='text-start'>
           <DialogTitle>{isEdit ? '修改部门' : '新增部门'}</DialogTitle>
           <DialogDescription>
@@ -172,14 +185,13 @@ export function DeptsActionDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>上级部门</FormLabel>
-                      <SelectDropdown
-                        key={`dept-parent-${field.value}-${deptOptions.length}`}
-                        defaultValue={field.value}
+                      <TreeSelect
+                        key={`dept-parent-${field.value}-${deptTreeSelectData.length}`}
+                        data={deptTreeSelectData}
+                        value={field.value}
                         onValueChange={field.onChange}
                         placeholder='请选择上级部门'
-                        className='w-full'
-                        items={deptOptions}
-                        isControlled
+                        rootOption={{ label: '顶级部门', value: '0' }}
                       />
                       <FormMessage />
                     </FormItem>
@@ -192,7 +204,11 @@ export function DeptsActionDialog({
                     <FormItem>
                       <FormLabel>部门名称</FormLabel>
                       <FormControl>
-                        <Input placeholder='请输入部门名称' {...field} />
+                        <Input
+                          ref={deptNameInputRef}
+                          placeholder='请输入部门名称'
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

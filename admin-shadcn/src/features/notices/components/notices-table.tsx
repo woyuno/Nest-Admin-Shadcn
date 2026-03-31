@@ -114,6 +114,7 @@ export function NoticesTable({
           {
             columnId: 'noticeType',
             title: '公告类型',
+            selectionMode: 'single',
             options: [
               { label: '通知', value: 'notice' },
               { label: '公告', value: 'announcement' },

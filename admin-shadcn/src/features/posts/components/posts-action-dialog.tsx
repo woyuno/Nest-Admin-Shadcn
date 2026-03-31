@@ -5,8 +5,8 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { resolveDialogFormState } from '@/lib/dialog-form-state'
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   createPost,
   fetchPostDetail,
+  postDetailQueryKey,
   postsQueryKey,
   updatePost,
 } from '../api/posts'
@@ -71,26 +72,32 @@ export function PostsActionDialog({
   })
 
   const detailQuery = useQuery({
-    queryKey: ['posts', 'detail', currentRow?.postId],
+    queryKey: postDetailQueryKey(currentRow?.postId),
     queryFn: () => fetchPostDetail(currentRow!.postId),
     enabled: open && isEdit,
+    staleTime: 60 * 1000,
   })
 
   useEffect(() => {
-    if (!open) {
-      form.reset(emptyValues)
-      return
-    }
-
-    if (isEdit) {
-      if (detailQuery.data) {
-        form.reset(detailQuery.data)
-      }
-      return
-    }
-
-    form.reset(emptyValues)
-  }, [detailQuery.data, form, isEdit, open])
+    form.reset(
+      resolveDialogFormState({
+        open,
+        isEdit,
+        emptyValues,
+        detailValues: detailQuery.data,
+        draftValues: currentRow
+          ? {
+              postId: currentRow.postId,
+              postCode: currentRow.postCode,
+              postName: currentRow.postName,
+              postSort: currentRow.postSort,
+              status: currentRow.status,
+              remark: currentRow.remark,
+            }
+          : undefined,
+      })
+    )
+  }, [currentRow, detailQuery.data, form, isEdit, open])
 
   const saveMutation = useMutation({
     mutationFn: async (values: PostFormValues) => {
@@ -106,8 +113,6 @@ export function PostsActionDialog({
       form.reset(emptyValues)
     },
   })
-
-  const loading = isEdit && detailQuery.isLoading
 
   return (
     <Dialog
@@ -126,18 +131,12 @@ export function PostsActionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
-          <div className='flex h-48 items-center justify-center text-muted-foreground'>
-            <Loader2 className='me-2 size-4 animate-spin' />
-            正在加载岗位信息...
-          </div>
-        ) : (
-          <Form {...form}>
-            <form
-              id='post-form'
-              onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
-              className='space-y-5'
-            >
+        <Form {...form}>
+          <form
+            id='post-form'
+            onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
+            className='space-y-5'
+          >
               <div className='grid gap-4 md:grid-cols-2'>
                 <FormField
                   control={form.control}
@@ -224,9 +223,8 @@ export function PostsActionDialog({
                   </FormItem>
                 )}
               />
-            </form>
-          </Form>
-        )}
+          </form>
+        </Form>
 
         <DialogFooter>
           <Button
@@ -236,7 +234,7 @@ export function PostsActionDialog({
           >
             取消
           </Button>
-          <Button type='submit' form='post-form' disabled={saveMutation.isPending || loading}>
+          <Button type='submit' form='post-form' disabled={saveMutation.isPending}>
             {saveMutation.isPending ? '保存中...' : isEdit ? '保存修改' : '创建岗位'}
           </Button>
         </DialogFooter>

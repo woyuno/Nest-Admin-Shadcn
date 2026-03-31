@@ -30,6 +30,7 @@ import { UserType } from './dto/user';
 import { ClientInfoDto } from 'src/common/decorators/common.decorator';
 import { Cacheable, CacheEvict } from 'src/common/decorators/redis.decorator';
 import { Captcha } from 'src/common/decorators/captcha.decorator';
+import { buildAssignedUserRoles, mergeUsersWithRoles } from './user-list-role.helper';
 
 @Injectable()
 export class UserService {
@@ -151,11 +152,42 @@ export class UserService {
     entity.leftJoinAndMapOne('user.dept', SysDeptEntity, 'dept', 'dept.deptId = user.deptId');
 
     const [list, total] = await entity.getManyAndCount();
+    const enrichedList = await this.attachRolesForUsers(list);
 
     return ResultData.ok({
-      list,
+      list: enrichedList,
       total,
     });
+  }
+
+  private async attachRolesForUsers<T extends { userId: number }>(users: T[]): Promise<Array<T & { roles: SysRoleEntity[] }>> {
+    if (users.length === 0) {
+      return [];
+    }
+
+    const userIds = users.map((item) => item.userId);
+    const userRoleMappings = await this.sysUserWithRoleEntityRep.find({
+      where: {
+        userId: In(userIds),
+      },
+      select: ['userId', 'roleId'],
+    });
+
+    if (userRoleMappings.length === 0) {
+      return users.map((item) => ({
+        ...item,
+        roles: [],
+      }));
+    }
+
+    const roleIds = Uniq(userRoleMappings.map((item) => item.roleId));
+    const roles = await this.roleService.findRoles({
+      where: {
+        delFlag: '0',
+        roleId: In(roleIds),
+      },
+    });
+    return mergeUsersWithRoles(users, userRoleMappings, roles);
   }
 
   /**
@@ -622,15 +654,7 @@ export class UserService {
     user['dept'] = dept;
 
     const roleIds = await this.getRoleIds([userId]);
-    //TODO flag用来给前端表格标记选中状态，后续优化
-    user['roles'] = allRoles.filter((item) => {
-      if (roleIds.includes(item.roleId)) {
-        item['flag'] = true;
-        return true;
-      } else {
-        return true;
-      }
-    });
+    user['roles'] = buildAssignedUserRoles(allRoles, roleIds);
 
     return ResultData.ok({
       roles: allRoles,

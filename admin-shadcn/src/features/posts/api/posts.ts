@@ -23,6 +23,8 @@ type BackendPostsListResponse = {
 }
 
 export const postsQueryKey = ['posts'] as const
+export const postDetailQueryKey = (postId?: number) =>
+  ['posts', 'detail', postId] as const
 
 export async function fetchPosts(search: PostsSearch) {
   const response = await request.get<ApiEnvelope<BackendPostsListResponse>>(

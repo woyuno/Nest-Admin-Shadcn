@@ -15,9 +15,9 @@ import { format } from 'date-fns'
 import { Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { type NavigateFn, useTableUrlState } from '@/hooks/use-table-url-state'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { OperlogStatusBadge } from '@/components/status-badge'
 import {
   Table,
   TableBody,
@@ -42,16 +42,6 @@ type OperlogTableProps = {
   navigate: NavigateFn
   onSelectionChange?: (rows: OperlogItem[]) => void
   onView?: (row: OperlogItem) => void
-}
-
-function statusBadge(status: OperlogItem['status']) {
-  return status === 'success' ? (
-    <Badge className='bg-emerald-100 text-emerald-700 hover:bg-emerald-100'>
-      正常
-    </Badge>
-  ) : (
-    <Badge variant='destructive'>失败</Badge>
-  )
 }
 
 export function OperlogTable({
@@ -104,7 +94,7 @@ export function OperlogTable({
       {
         accessorKey: 'status',
         header: '状态',
-        cell: ({ row }) => statusBadge(row.original.status),
+        cell: ({ row }) => <OperlogStatusBadge status={row.original.status} />,
       },
       {
         accessorKey: 'operTime',
@@ -214,6 +204,7 @@ export function OperlogTable({
           {
             columnId: 'status',
             title: '状态',
+            selectionMode: 'single',
             options: [
               { label: '正常', value: 'success' },
               { label: '失败', value: 'error' },

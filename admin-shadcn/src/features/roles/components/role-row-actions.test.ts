@@ -7,11 +7,6 @@ describe('role-row-actions', () => {
   })
 
   it('shows the full action set for normal roles', () => {
-    expect(getRoleRowActions(2)).toEqual([
-      'edit',
-      'data-scope',
-      'assign-user',
-      'delete',
-    ])
+    expect(getRoleRowActions(2)).toEqual(['edit', 'data-scope', 'delete'])
   })
 })

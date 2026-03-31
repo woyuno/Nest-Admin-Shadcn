@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { RefreshPageButton } from '@/components/refresh-page-button'
 import { Button } from '@/components/ui/button'
 import { DataTableFacetedFilter } from './faceted-filter'
+import { DataTableSingleFilter } from './single-filter'
 import { DataTableViewOptions } from './view-options'
 
 type DataTableToolbarProps<TData> = {
@@ -18,6 +19,7 @@ type DataTableToolbarProps<TData> = {
   filters?: {
     columnId: string
     title: string
+    selectionMode?: 'single' | 'multiple'
     options: {
       label: string
       value: string
@@ -79,12 +81,21 @@ export function DataTableToolbar<TData>({
             const column = table.getColumn(filter.columnId)
             if (!column) return null
             return (
-              <DataTableFacetedFilter
-                key={filter.columnId}
-                column={column}
-                title={filter.title}
-                options={filter.options}
-              />
+              filter.selectionMode === 'single' ? (
+                <DataTableSingleFilter
+                  key={filter.columnId}
+                  column={column}
+                  title={filter.title}
+                  options={filter.options}
+                />
+              ) : (
+                <DataTableFacetedFilter
+                  key={filter.columnId}
+                  column={column}
+                  title={filter.title}
+                  options={filter.options}
+                />
+              )
             )
           })}
         </div>

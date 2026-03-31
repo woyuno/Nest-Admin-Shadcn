@@ -31,6 +31,9 @@ import {
   fetchMenuTree,
   fetchRoleDetail,
   fetchRoleMenuTree,
+  roleBaseMenuTreeQueryKey,
+  roleDetailQueryKey,
+  roleMenuTreeQueryKey,
   rolesQueryKey,
   updateRole,
 } from '../api/roles'
@@ -71,7 +74,7 @@ export function RolesActionDialog({
 }: RolesActionDialogProps) {
   const isEdit = typeof currentRow?.roleId === 'number'
   const queryClient = useQueryClient()
-  const [checkedMenuIds, setCheckedMenuIds] = useState<number[]>([])
+  const [localCheckedMenuIds, setLocalCheckedMenuIds] = useState<number[] | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(formSchema),
@@ -79,35 +82,47 @@ export function RolesActionDialog({
   })
 
   const menuTreeQuery = useQuery({
-    queryKey: ['roles', 'menu-tree'],
+    queryKey: roleBaseMenuTreeQueryKey,
     queryFn: fetchMenuTree,
-    enabled: open && !isEdit,
+    enabled: open,
+    staleTime: 60_000,
   })
 
   const roleDetailQuery = useQuery({
-    queryKey: ['roles', 'detail', currentRow?.roleId],
+    queryKey: roleDetailQueryKey(currentRow?.roleId),
     queryFn: () => fetchRoleDetail(currentRow!.roleId),
     enabled: open && isEdit,
+    staleTime: 60_000,
   })
 
   const roleMenuTreeQuery = useQuery({
-    queryKey: ['roles', 'menu-tree', currentRow?.roleId],
+    queryKey: roleMenuTreeQueryKey(currentRow?.roleId),
     queryFn: () => fetchRoleMenuTree(currentRow!.roleId),
     enabled: open && isEdit,
+    staleTime: 60_000,
   })
 
   useEffect(() => {
     if (!open) {
       form.reset(defaultValues)
-      setCheckedMenuIds([])
-      setSubmitError(null)
       return
     }
 
     if (!isEdit) {
       form.reset(defaultValues)
-      setCheckedMenuIds([])
       return
+    }
+
+    if (currentRow) {
+      form.reset({
+        roleId: currentRow.roleId,
+        roleName: currentRow.roleName,
+        roleKey: currentRow.roleKey,
+        roleSort: currentRow.roleSort ?? 0,
+        status: currentRow.status === 'active' ? '0' : '1',
+        remark: currentRow.remark ?? '',
+        menuCheckStrictly: roleDetailQuery.data?.menuCheckStrictly ?? true,
+      })
     }
 
     if (roleDetailQuery.data && roleMenuTreeQuery.data) {
@@ -120,10 +135,8 @@ export function RolesActionDialog({
         remark: roleDetailQuery.data.remark ?? '',
         menuCheckStrictly: roleDetailQuery.data.menuCheckStrictly ?? true,
       })
-      setCheckedMenuIds(roleMenuTreeQuery.data.checkedKeys ?? [])
-      setSubmitError(null)
     }
-  }, [form, isEdit, open, roleDetailQuery.data, roleMenuTreeQuery.data])
+  }, [currentRow, form, isEdit, open, roleDetailQuery.data, roleMenuTreeQuery.data])
 
   const saveMutation = useMutation({
     mutationFn: async (values: RoleFormValues) => {
@@ -155,7 +168,7 @@ export function RolesActionDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: rolesQueryKey })
       form.reset(defaultValues)
-      setCheckedMenuIds([])
+      setLocalCheckedMenuIds(null)
       setSubmitError(null)
       onOpenChange(false)
     },
@@ -164,12 +177,16 @@ export function RolesActionDialog({
     },
   })
 
+  const checkedMenuIds =
+    localCheckedMenuIds ??
+    (isEdit ? roleMenuTreeQuery.data?.checkedKeys ?? [] : [])
+
   const treeData = isEdit
-    ? roleMenuTreeQuery.data?.menus ?? []
+    ? roleMenuTreeQuery.data?.menus ?? menuTreeQuery.data ?? []
     : menuTreeQuery.data ?? []
 
-  const loading =
-    (isEdit && (roleDetailQuery.isLoading || roleMenuTreeQuery.isLoading)) ||
+  const isTreeLoading =
+    (isEdit && roleMenuTreeQuery.isLoading && treeData.length === 0) ||
     (!isEdit && menuTreeQuery.isLoading)
 
   return (
@@ -177,6 +194,10 @@ export function RolesActionDialog({
       open={open}
       onOpenChange={(state) => {
         if (!saveMutation.isPending) {
+          if (!state) {
+            setLocalCheckedMenuIds(null)
+            setSubmitError(null)
+          }
           onOpenChange(state)
         }
       }}
@@ -189,18 +210,13 @@ export function RolesActionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
-          <div className='py-10 text-center text-sm text-muted-foreground'>
-            正在加载角色配置...
-          </div>
-        ) : (
-          <ScrollArea className='max-h-[70vh] pe-4'>
-            <Form {...form}>
-              <form
-                id='role-form'
-                onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
-                className='space-y-5'
-              >
+        <ScrollArea className='max-h-[70vh] pe-4'>
+          <Form {...form}>
+            <form
+              id='role-form'
+              onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
+              className='space-y-5'
+            >
                 <div className='grid gap-4 md:grid-cols-2'>
                   <FormField
                     control={form.control}
@@ -293,12 +309,18 @@ export function RolesActionDialog({
                         <span>父子联动</span>
                       </div>
                       <div className='pt-2'>
-                        <RolesTreeSelector
-                          data={treeData}
-                          checkedIds={checkedMenuIds}
-                          onCheckedIdsChange={setCheckedMenuIds}
-                          strictMode={field.value}
-                        />
+                        {isTreeLoading ? (
+                          <div className='rounded-md border p-6 text-center text-sm text-muted-foreground'>
+                            正在加载菜单权限...
+                          </div>
+                        ) : (
+                          <RolesTreeSelector
+                            data={treeData}
+                            checkedIds={checkedMenuIds}
+                            onCheckedIdsChange={setLocalCheckedMenuIds}
+                            strictMode={field.value}
+                          />
+                        )}
                       </div>
                       <FormMessage />
                     </FormItem>
@@ -321,10 +343,9 @@ export function RolesActionDialog({
                 {submitError ? (
                   <p className='text-sm text-destructive'>{submitError}</p>
                 ) : null}
-              </form>
-            </Form>
-          </ScrollArea>
-        )}
+            </form>
+          </Form>
+        </ScrollArea>
 
         <DialogFooter>
           <Button
@@ -334,7 +355,7 @@ export function RolesActionDialog({
           >
             取消
           </Button>
-          <Button type='submit' form='role-form' disabled={saveMutation.isPending || loading}>
+          <Button type='submit' form='role-form' disabled={saveMutation.isPending || isTreeLoading}>
             {saveMutation.isPending ? '保存中...' : isEdit ? '保存修改' : '创建角色'}
           </Button>
         </DialogFooter>

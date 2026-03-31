@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { DataTablePagination, DataTableToolbar } from '@/components/data-table'
+import { DataTablePagination } from '@/components/data-table'
 import { type User } from '../data/schema'
 import { DataTableBulkActions } from './data-table-bulk-actions'
 import { usersColumns as columns } from './users-columns'
@@ -83,7 +83,6 @@ export function UsersTable({
 
   const pageCount = Math.max(1, Math.ceil(total / pagination.pageSize))
 
-  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
@@ -129,27 +128,6 @@ export function UsersTable({
         'flex flex-1 flex-col gap-4'
       )}
     >
-      <DataTableToolbar
-        table={table}
-        searchPlaceholder='按用户账号搜索'
-        searchKey='userName'
-        textFilters={[
-          {
-            columnId: 'phonenumber',
-            placeholder: '按手机号搜索',
-          },
-        ]}
-        filters={[
-          {
-            columnId: 'status',
-            title: '状态',
-            options: [
-              { label: '启用', value: 'active' },
-              { label: '停用', value: 'inactive' },
-            ],
-          },
-        ]}
-      />
       <div className='overflow-hidden rounded-md border'>
         <Table>
           <TableHeader>

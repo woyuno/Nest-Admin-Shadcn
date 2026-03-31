@@ -23,6 +23,8 @@ type BackendConfigsListResponse = {
 }
 
 export const configsQueryKey = ['configs'] as const
+export const configDetailQueryKey = (configId?: number) =>
+  ['configs', 'detail', configId] as const
 
 export async function fetchConfigs(search: ConfigsSearch) {
   const response = await request.get<ApiEnvelope<BackendConfigsListResponse>>(

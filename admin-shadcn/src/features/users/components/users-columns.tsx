@@ -1,11 +1,10 @@
 import { type ColumnDef } from '@tanstack/react-table'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { LongText } from '@/components/long-text'
-import { callTypes } from '../data/data'
+import { ActiveStatusBadge } from '@/components/status-badge'
 import { type User } from '../data/schema'
 import { DataTableRowActions } from './data-table-row-actions'
 import { UsersStatusSwitch } from './users-status-switch'
@@ -78,6 +77,15 @@ export const usersColumns: ColumnDef<User>[] = [
     cell: ({ row }) => <LongText className='max-w-36'>{row.original.deptName}</LongText>,
   },
   {
+    accessorKey: 'roleNames',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='角色' />
+    ),
+    cell: ({ row }) => (
+      <LongText className='max-w-40'>{row.original.roleNames ?? '-'}</LongText>
+    ),
+  },
+  {
     accessorKey: 'phonenumber',
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='手机号码' />
@@ -92,12 +100,9 @@ export const usersColumns: ColumnDef<User>[] = [
     ),
     cell: ({ row }) => {
       const { status } = row.original
-      const badgeColor = callTypes.get(status)
       return (
         <div className='flex items-center gap-3'>
-          <Badge variant='outline' className={cn('capitalize', badgeColor)}>
-            {status === 'active' ? '启用' : status === 'inactive' ? '停用' : status}
-          </Badge>
+          <ActiveStatusBadge status={status} />
           <UsersStatusSwitch user={row.original} />
         </div>
       )

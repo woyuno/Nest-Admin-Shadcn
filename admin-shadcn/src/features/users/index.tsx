@@ -2,10 +2,8 @@ import { useState } from 'react'
 import { type RowSelectionState } from '@tanstack/react-table'
 import { getRouteApi } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Button } from '@/components/ui/button'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { Header } from '@/components/layout/header'
-import { Input } from '@/components/ui/input'
 import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
@@ -15,6 +13,7 @@ import { UsersDeptFilter } from './components/users-dept-filter'
 import { UsersDialogs } from './components/users-dialogs'
 import { UsersPrimaryButtons } from './components/users-primary-buttons'
 import { UsersProvider } from './components/users-provider'
+import { UsersSearchToolbar } from './components/users-search-toolbar'
 import { UsersTable } from './components/users-table'
 import { type User } from './data/schema'
 
@@ -78,50 +77,11 @@ export function Users() {
             }
           />
           <div className='flex flex-1 flex-col gap-4'>
-            <div className='grid gap-3 rounded-lg border bg-card p-4 md:grid-cols-[1fr_1fr_auto]'>
-              <Input
-                type='date'
-                value={search.beginTime ?? ''}
-                onChange={(event) =>
-                  navigate({
-                    search: (prev) => ({
-                      ...(prev as Record<string, unknown>),
-                      page: 1,
-                      beginTime: event.target.value || undefined,
-                    }),
-                  })
-                }
-              />
-              <Input
-                type='date'
-                value={search.endTime ?? ''}
-                onChange={(event) =>
-                  navigate({
-                    search: (prev) => ({
-                      ...(prev as Record<string, unknown>),
-                      page: 1,
-                      endTime: event.target.value || undefined,
-                    }),
-                  })
-                }
-              />
-              <Button
-                variant='outline'
-                onClick={() =>
-                  navigate({
-                    search: (prev) => ({
-                      ...(prev as Record<string, unknown>),
-                      page: 1,
-                      deptId: undefined,
-                      beginTime: undefined,
-                      endTime: undefined,
-                    }),
-                  })
-                }
-              >
-                重置部门和日期
-              </Button>
-            </div>
+            <UsersSearchToolbar
+              key={`${search.username ?? ''}|${search.phonenumber ?? ''}|${search.status?.[0] ?? ''}|${search.beginTime ?? ''}|${search.endTime ?? ''}`}
+              search={search}
+              navigate={navigate}
+            />
             <UsersTable
               data={usersData.list}
               total={usersData.total}

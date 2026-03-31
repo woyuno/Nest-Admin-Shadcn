@@ -114,6 +114,7 @@ export function PostsTable({
           {
             columnId: 'status',
             title: '状态',
+            selectionMode: 'single',
             options: [
               { label: '启用', value: 'active' },
               { label: '停用', value: 'inactive' },

@@ -1,7 +1,7 @@
 import { format } from 'date-fns'
 import { type ColumnDef } from '@tanstack/react-table'
-import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { ActiveStatusBadge } from '@/components/status-badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { LongText } from '@/components/long-text'
 import { cn } from '@/lib/utils'
@@ -70,11 +70,7 @@ export const postsColumns: ColumnDef<Post>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='状态' />
     ),
-    cell: ({ row }) => (
-      <Badge variant='outline'>
-        {row.original.status === 'active' ? '启用' : '停用'}
-      </Badge>
-    ),
+    cell: ({ row }) => <ActiveStatusBadge status={row.original.status} />,
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
     enableSorting: false,
   },

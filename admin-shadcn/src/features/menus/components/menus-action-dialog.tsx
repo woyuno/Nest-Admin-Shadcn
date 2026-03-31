@@ -36,6 +36,7 @@ import {
 } from '../api/menus'
 import { type Menu } from '../data/schema'
 import { type MenuFormValues } from '../lib/menu-contract'
+import { MenuIconField } from './menu-icon-field'
 
 const formSchema = z
   .object({
@@ -283,19 +284,19 @@ export function MenusActionDialog({
 
               {menuType !== 'button' ? (
                 <div className='grid gap-4 md:grid-cols-2'>
-                  <FormField
-                    control={form.control}
-                    name='icon'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>菜单图标</FormLabel>
-                        <FormControl>
-                          <Input placeholder='请输入图标名称，如 tree-table' {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name='icon'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>菜单图标</FormLabel>
+                      <FormControl>
+                        <MenuIconField value={field.value} onChange={field.onChange} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                   <FormField
                     control={form.control}
                     name='path'

@@ -1,6 +1,8 @@
 import { Pencil, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
+import { ActiveStatusBadge } from '@/components/status-badge'
 import {
   Table,
   TableBody,
@@ -10,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { PermissionGuard } from '@/features/auth/components/permission-guard'
+import { dictDataDetailQueryKey, fetchDictDataDetail } from '../api/dicts'
 import { type DictData } from '../data/schema'
 import { useDicts } from './dicts-provider'
 
@@ -36,6 +39,7 @@ function getListClassLabel(listClass: string) {
 }
 
 export function DictsDataTable({ rows, isLoading }: DictsDataTableProps) {
+  const queryClient = useQueryClient()
   const { setCurrentDataRow, setOpen } = useDicts()
 
   return (
@@ -67,7 +71,7 @@ export function DictsDataTable({ rows, isLoading }: DictsDataTableProps) {
                 <TableCell>{row.dictValue}</TableCell>
                 <TableCell>{row.dictSort}</TableCell>
                 <TableCell>{getListClassLabel(row.listClass)}</TableCell>
-                <TableCell>{row.status === 'active' ? '启用' : '停用'}</TableCell>
+                <TableCell><ActiveStatusBadge status={row.status} /></TableCell>
                 <TableCell>{row.remark || '-'}</TableCell>
                 <TableCell>{format(row.createdAt, 'yyyy-MM-dd HH:mm')}</TableCell>
                 <TableCell>
@@ -77,6 +81,11 @@ export function DictsDataTable({ rows, isLoading }: DictsDataTableProps) {
                         variant='ghost'
                         size='sm'
                         onClick={() => {
+                          queryClient.prefetchQuery({
+                            queryKey: dictDataDetailQueryKey(row.dictCode),
+                            queryFn: () => fetchDictDataDetail(row.dictCode),
+                            staleTime: 60 * 1000,
+                          })
                           setCurrentDataRow(row)
                           setOpen('dataEdit')
                         }}
