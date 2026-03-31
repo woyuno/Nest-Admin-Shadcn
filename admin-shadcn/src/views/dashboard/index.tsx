@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   Users,
 } from 'lucide-react'
-import { appConfig } from '@/config/app'
 import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import {
@@ -77,9 +76,6 @@ export function Dashboard() {
             <h1 className='text-2xl font-bold tracking-tight'>
               欢迎回来，{displayName}
             </h1>
-            <p className='text-muted-foreground'>
-              当前正在使用 {appConfig.name} 的 React 并行管理端，已接入现有认证、菜单和权限体系。
-            </p>
           </div>
           <Button asChild>
             <Link to='/settings'>查看个人中心</Link>
