@@ -6,3 +6,7 @@
 /docs/node_modules
 /docs/dist
 /**/node_modules
+admin-start.log
+admin-start.err.log
+server-start.log
+server-start.err.log
