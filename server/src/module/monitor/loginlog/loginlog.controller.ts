@@ -4,6 +4,8 @@ import { Response } from 'express';
 import { LoginlogService } from './loginlog.service';
 import { ListLoginlogDto } from './dto/index';
 import { RequirePermission } from 'src/common/decorators/require-premission.decorator';
+import { BusinessType } from 'src/common/constant/business.constant';
+import { Operlog } from 'src/common/decorators/operlog.decorator';
 
 @ApiTags('登录日志')
 @Controller('monitor/logininfor')
@@ -27,6 +29,7 @@ export class LoginlogController {
     summary: '登录日志-清除全部日志',
   })
   @RequirePermission('monitor:logininfor:remove')
+  @Operlog({ businessType: BusinessType.CLEAN })
   @Delete('/clean')
   removeAll() {
     return this.loginlogService.removeAll();
@@ -36,6 +39,7 @@ export class LoginlogController {
     summary: '登录日志-删除日志',
   })
   @RequirePermission('monitor:logininfor:remove')
+  @Operlog({ businessType: BusinessType.DELETE })
   @Delete(':id')
   remove(@Param('id') ids: string) {
     const infoIds = ids.split(',').map((id) => id);
@@ -44,6 +48,7 @@ export class LoginlogController {
 
   @ApiOperation({ summary: '导出登录日志为xlsx文件' })
   @RequirePermission('system:config:export')
+  @Operlog({ businessType: BusinessType.EXPORT })
   @Post('/export')
   async export(@Res() res: Response, @Body() body: ListLoginlogDto): Promise<void> {
     return this.loginlogService.export(res, body);

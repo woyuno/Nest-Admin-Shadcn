@@ -4,6 +4,8 @@ import { DictService } from './dict.service';
 import { CreateDictTypeDto, UpdateDictTypeDto, ListDictType, CreateDictDataDto, UpdateDictDataDto, ListDictData } from './dto/index';
 import { RequirePermission } from 'src/common/decorators/require-premission.decorator';
 import { Response } from 'express';
+import { BusinessType } from 'src/common/constant/business.constant';
+import { Operlog } from 'src/common/decorators/operlog.decorator';
 
 @ApiTags('字典管理')
 @Controller('system/dict')
@@ -21,6 +23,7 @@ export class DictController {
   })
   @RequirePermission('system:dict:add')
   @HttpCode(200)
+  @Operlog({ businessType: BusinessType.INSERT })
   @Post('/type')
   createType(@Body() createDictTypeDto: CreateDictTypeDto, @Request() req) {
     createDictTypeDto['createBy'] = req.user.userName;
@@ -31,6 +34,7 @@ export class DictController {
     summary: '字典数据-刷新缓存',
   })
   @RequirePermission('system:dict:remove')
+  @Operlog({ businessType: BusinessType.CLEAN })
   @Delete('/type/refreshCache')
   refreshCache() {
     return this.dictService.resetDictCache();
@@ -40,6 +44,7 @@ export class DictController {
     summary: '字典类型-删除',
   })
   @RequirePermission('system:dict:remove')
+  @Operlog({ businessType: BusinessType.DELETE })
   @Delete('/type/:id')
   deleteType(@Param('id') ids: string) {
     const dictIds = ids.split(',').map((id) => +id);
@@ -50,6 +55,7 @@ export class DictController {
     summary: '字典类型-修改',
   })
   @RequirePermission('system:dict:edit')
+  @Operlog({ businessType: BusinessType.UPDATE })
   @Put('/type')
   updateType(@Body() updateDictTypeDto: UpdateDictTypeDto) {
     return this.dictService.updateType(updateDictTypeDto);
@@ -88,6 +94,7 @@ export class DictController {
   })
   @RequirePermission('system:dict:add')
   @HttpCode(200)
+  @Operlog({ businessType: BusinessType.INSERT })
   @Post('/data')
   createDictData(@Body() createDictDataDto: CreateDictDataDto, @Request() req) {
     createDictDataDto['createBy'] = req.user.userName;
@@ -98,6 +105,7 @@ export class DictController {
     summary: '字典数据-删除',
   })
   @RequirePermission('system:dict:remove')
+  @Operlog({ businessType: BusinessType.DELETE })
   @Delete('/data/:id')
   deleteDictData(@Param('id') ids: string) {
     const dictIds = ids.split(',').map((id) => +id);
@@ -108,6 +116,7 @@ export class DictController {
     summary: '字典数据-修改',
   })
   @RequirePermission('system:dict:edit')
+  @Operlog({ businessType: BusinessType.UPDATE })
   @Put('/data')
   updateDictData(@Body() updateDictDataDto: UpdateDictDataDto) {
     return this.dictService.updateDictData(updateDictDataDto);
@@ -140,6 +149,7 @@ export class DictController {
 
   @ApiOperation({ summary: '导出字典组为xlsx文件' })
   @RequirePermission('system:dict:export')
+  @Operlog({ businessType: BusinessType.EXPORT })
   @Post('/type/export')
   async export(@Res() res: Response, @Body() body: ListDictType): Promise<void> {
     return this.dictService.export(res, body);
@@ -147,6 +157,7 @@ export class DictController {
 
   @ApiOperation({ summary: '导出字典内容为xlsx文件' })
   @RequirePermission('system:dict:export')
+  @Operlog({ businessType: BusinessType.EXPORT })
   @Post('/data/export')
   async exportData(@Res() res: Response, @Body() body: ListDictType): Promise<void> {
     return this.dictService.exportData(res, body);

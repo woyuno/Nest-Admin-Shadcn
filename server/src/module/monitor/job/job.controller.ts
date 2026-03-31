@@ -4,6 +4,8 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JobService } from './job.service';
 import { CreateJobDto, ListJobDto } from './dto/create-job.dto';
 import { RequirePermission } from 'src/common/decorators/require-premission.decorator';
+import { BusinessType } from 'src/common/constant/business.constant';
+import { Operlog } from 'src/common/decorators/operlog.decorator';
 
 @ApiTags('定时任务管理')
 @Controller('monitor/job')
@@ -28,6 +30,7 @@ export class JobController {
   @Post()
   @ApiOperation({ summary: '创建定时任务' })
   @RequirePermission('monitor:job:add')
+  @Operlog({ businessType: BusinessType.INSERT })
   add(@Body() createJobDto: CreateJobDto, @Req() req: any) {
     return this.jobService.create(createJobDto, req.user?.userName);
   }
@@ -35,6 +38,7 @@ export class JobController {
   @Put('changeStatus')
   @ApiOperation({ summary: '修改任务状态' })
   @RequirePermission('monitor:job:changeStatus')
+  @Operlog({ businessType: BusinessType.UPDATE })
   changeStatus(@Body('jobId') jobId: number, @Body('status') status: string, @Req() req: any) {
     return this.jobService.changeStatus(jobId, status, req.user?.userName);
   }
@@ -42,6 +46,7 @@ export class JobController {
   @Put('')
   @ApiOperation({ summary: '修改定时任务' })
   @RequirePermission('monitor:job:edit')
+  @Operlog({ businessType: BusinessType.UPDATE })
   update(@Body('jobId') jobId: number, @Body() updateJobDto: Partial<CreateJobDto>, @Req() req: any) {
     return this.jobService.update(jobId, updateJobDto, req.user?.userName);
   }
@@ -49,6 +54,7 @@ export class JobController {
   @Delete(':jobIds')
   @ApiOperation({ summary: '删除定时任务' })
   @RequirePermission('monitor:job:remove')
+  @Operlog({ businessType: BusinessType.DELETE })
   remove(@Param('jobIds') jobIds: string) {
     return this.jobService.remove(jobIds.split(',').map((id) => +id));
   }
@@ -56,12 +62,14 @@ export class JobController {
   @Put('/run')
   @ApiOperation({ summary: '立即执行一次' })
   @RequirePermission('monitor:job:changeStatus')
+  @Operlog({ businessType: BusinessType.OTHER })
   run(@Body('jobId') jobId: number) {
     return this.jobService.run(jobId);
   }
 
   @ApiOperation({ summary: '导出定时任务为xlsx文件' })
   @RequirePermission('monitor:job:export')
+  @Operlog({ businessType: BusinessType.EXPORT })
   @Post('/export')
   async export(@Res() res: Response, @Body() body: ListJobDto): Promise<void> {
     return this.jobService.export(res, body);

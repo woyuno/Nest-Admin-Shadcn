@@ -48,6 +48,7 @@ export class OperlogController {
     summary: '操作日志-删除',
   })
   @RequirePermission('monitor:operlog:remove')
+  @Operlog({ businessType: BusinessType.DELETE })
   @Delete(':operId')
   remove(@Param('operId') operId: string) {
     return this.operlogService.remove(+operId);
@@ -55,6 +56,7 @@ export class OperlogController {
 
   @ApiOperation({ summary: '导出操作日志数据为xlsx' })
   @RequirePermission('monitor:operlog:export')
+  @Operlog({ businessType: BusinessType.EXPORT })
   @Post('/export')
   async exportData(@Res() res: Response, @Body() body: QueryOperLogDto): Promise<void> {
     return this.operlogService.export(res, body);

@@ -4,6 +4,8 @@ import { PostService } from './post.service';
 import { CreatePostDto, UpdatePostDto, ListPostDto } from './dto/index';
 import { RequirePermission } from 'src/common/decorators/require-premission.decorator';
 import { Response } from 'express';
+import { BusinessType } from 'src/common/constant/business.constant';
+import { Operlog } from 'src/common/decorators/operlog.decorator';
 
 @ApiTags('岗位管理')
 @Controller('system/post')
@@ -19,6 +21,7 @@ export class PostController {
     required: true,
   })
   @RequirePermission('system:post:add')
+  @Operlog({ businessType: BusinessType.INSERT })
   @Post('/')
   create(@Body() createPostDto: CreatePostDto) {
     return this.postService.create(createPostDto);
@@ -54,6 +57,7 @@ export class PostController {
     required: true,
   })
   @RequirePermission('system:post:edit')
+  @Operlog({ businessType: BusinessType.UPDATE })
   @Put('/')
   update(@Body() updatePostDto: UpdatePostDto) {
     return this.postService.update(updatePostDto);
@@ -63,6 +67,7 @@ export class PostController {
     summary: '岗位管理-删除',
   })
   @RequirePermission('system:post:remove')
+  @Operlog({ businessType: BusinessType.DELETE })
   @Delete('/:ids')
   remove(@Param('ids') ids: string) {
     const menuIds = ids.split(',').map((id) => id);
@@ -71,6 +76,7 @@ export class PostController {
 
   @ApiOperation({ summary: '导出岗位管理xlsx文件' })
   @RequirePermission('system:post:export')
+  @Operlog({ businessType: BusinessType.EXPORT })
   @Post('/export')
   async export(@Res() res: Response, @Body() body: ListPostDto): Promise<void> {
     return this.postService.export(res, body);

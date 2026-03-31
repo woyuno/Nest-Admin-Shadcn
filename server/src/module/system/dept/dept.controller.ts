@@ -3,6 +3,8 @@ import { ApiTags, ApiOperation, ApiBody, ApiConsumes, ApiQuery, ApiBearerAuth } 
 import { DeptService } from './dept.service';
 import { CreateDeptDto, UpdateDeptDto, ListDeptDto } from './dto/index';
 import { RequirePermission } from 'src/common/decorators/require-premission.decorator';
+import { BusinessType } from 'src/common/constant/business.constant';
+import { Operlog } from 'src/common/decorators/operlog.decorator';
 
 @ApiTags('部门管理')
 @Controller('system/dept')
@@ -20,6 +22,7 @@ export class DeptController {
   @RequirePermission('system:dept:add')
   @Post()
   @HttpCode(200)
+  @Operlog({ businessType: BusinessType.INSERT })
   create(@Body() createDeptDto: CreateDeptDto) {
     return this.deptService.create(createDeptDto);
   }
@@ -59,6 +62,7 @@ export class DeptController {
     required: true,
   })
   @RequirePermission('system:dept:edit')
+  @Operlog({ businessType: BusinessType.UPDATE })
   @Put()
   update(@Body() updateDeptDto: UpdateDeptDto) {
     return this.deptService.update(updateDeptDto);
@@ -68,6 +72,7 @@ export class DeptController {
     summary: '部门管理-删除',
   })
   @RequirePermission('system:dept:remove')
+  @Operlog({ businessType: BusinessType.DELETE })
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.deptService.remove(+id);

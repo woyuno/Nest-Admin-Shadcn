@@ -3,6 +3,8 @@ import { ApiTags, ApiOperation, ApiBody, ApiConsumes, ApiQuery, ApiBearerAuth } 
 import { MenuService } from './menu.service';
 import { CreateMenuDto, UpdateMenuDto, ListDeptDto } from './dto/index';
 import { RequirePermission } from 'src/common/decorators/require-premission.decorator';
+import { BusinessType } from 'src/common/constant/business.constant';
+import { Operlog } from 'src/common/decorators/operlog.decorator';
 
 @ApiTags('菜单管理')
 @Controller('system/menu')
@@ -18,6 +20,7 @@ export class MenuController {
     required: true,
   })
   @RequirePermission('system:menu:add')
+  @Operlog({ businessType: BusinessType.INSERT })
   @Post()
   create(@Body() createMenuDto: CreateMenuDto) {
     return this.menuService.create(createMenuDto);
@@ -67,6 +70,7 @@ export class MenuController {
     required: true,
   })
   @RequirePermission('system:menu:edit')
+  @Operlog({ businessType: BusinessType.UPDATE })
   @Put()
   update(@Body() updateMenuDto: UpdateMenuDto) {
     return this.menuService.update(updateMenuDto);
@@ -76,6 +80,7 @@ export class MenuController {
     summary: '菜单管理-删除',
   })
   @RequirePermission('system:menu:remove')
+  @Operlog({ businessType: BusinessType.DELETE })
   @Delete(':menuId')
   remove(@Param('menuId') menuId: string) {
     return this.menuService.remove(+menuId);

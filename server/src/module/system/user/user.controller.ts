@@ -69,6 +69,7 @@ export class UserController {
     required: true,
   })
   @RequirePermission('system:user:add')
+  @Operlog({ businessType: BusinessType.INSERT })
   @Post()
   create(@Body() createUserDto: CreateUserDto, @UserTool() { injectCreate }: UserToolType) {
     return this.userService.create(injectCreate(createUserDto));
@@ -114,6 +115,7 @@ export class UserController {
     summary: '用户-角色信息-更新',
   })
   @RequireRole('admin')
+  @Operlog({ businessType: BusinessType.GRANT })
   @Put('authRole')
   updateAuthRole(@Query() query) {
     return this.userService.updateAuthRole(query);
@@ -136,6 +138,7 @@ export class UserController {
     required: true,
   })
   @RequireRole('admin')
+  @Operlog({ businessType: BusinessType.UPDATE })
   @Put('changeStatus')
   changeStatus(@Body() changeStatusDto: ChangeStatusDto) {
     return this.userService.changeStatus(changeStatusDto);
@@ -149,6 +152,7 @@ export class UserController {
     required: true,
   })
   @RequirePermission('system:user:edit')
+  @Operlog({ businessType: BusinessType.UPDATE })
   @Put()
   async update(@Body() updateUserDto: UpdateUserDto, @User() user: UserDto) {
     const activeUserId = user.userId;
@@ -166,6 +170,7 @@ export class UserController {
     required: true,
   })
   @RequireRole('admin')
+  @Operlog({ businessType: BusinessType.UPDATE })
   @Put('resetPwd')
   resetPwd(@Body() body: ResetPwdDto) {
     return this.userService.resetPwd(body);
@@ -175,6 +180,7 @@ export class UserController {
     summary: '用户-删除',
   })
   @RequireRole('admin')
+  @Operlog({ businessType: BusinessType.DELETE })
   @Delete(':id')
   remove(@Param('id') ids: string) {
     const menuIds = ids.split(',').map((id) => +id);
@@ -183,6 +189,7 @@ export class UserController {
 
   @ApiOperation({ summary: '导出用户信息数据为xlsx' })
   @RequirePermission('system:user:export')
+  @Operlog({ businessType: BusinessType.EXPORT })
   @Post('/export')
   async export(@Res() res: Response, @Body() body: ListUserDto, @User() user: UserDto): Promise<void> {
     return this.userService.export(res, body, user.user);

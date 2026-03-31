@@ -4,6 +4,8 @@ import { JobLogService } from './job-log.service';
 import { RequirePermission } from 'src/common/decorators/require-premission.decorator';
 import { ListJobLogDto } from './dto/create-job.dto';
 import { Response } from 'express';
+import { BusinessType } from 'src/common/constant/business.constant';
+import { Operlog } from 'src/common/decorators/operlog.decorator';
 
 @ApiTags('定时任务日志管理')
 @Controller('monitor/jobLog')
@@ -21,12 +23,14 @@ export class JobLogController {
   @Delete('clean')
   @ApiOperation({ summary: '清空定时任务日志' })
   @RequirePermission('monitor:job:remove')
+  @Operlog({ businessType: BusinessType.CLEAN })
   clean() {
     return this.jobLogService.clean();
   }
 
   @ApiOperation({ summary: '导出调度日志为xlsx文件' })
   @RequirePermission('monitor:job:export')
+  @Operlog({ businessType: BusinessType.EXPORT })
   @Post('/export')
   async export(@Res() res: Response, @Body() body: ListJobLogDto): Promise<void> {
     return this.jobLogService.export(res, body);

@@ -5,6 +5,8 @@ import { Response } from 'express';
 import { CreateRoleDto, UpdateRoleDto, ListRoleDto, ChangeStatusDto, AuthUserCancelDto, AuthUserCancelAllDto, AuthUserSelectAllDto } from './dto/index';
 import { AllocatedListDto } from '../user/dto/index';
 import { RequirePermission } from 'src/common/decorators/require-premission.decorator';
+import { BusinessType } from 'src/common/constant/business.constant';
+import { Operlog } from 'src/common/decorators/operlog.decorator';
 
 import { UserService } from '../user/user.service';
 import { User, UserDto } from 'src/module/system/user/user.decorator';
@@ -26,6 +28,7 @@ export class RoleController {
     required: true,
   })
   @RequirePermission('system:role:add')
+  @Operlog({ businessType: BusinessType.INSERT })
   @Post()
   create(@Body() createRoleDto: CreateRoleDto) {
     return this.roleService.create(createRoleDto);
@@ -70,6 +73,7 @@ export class RoleController {
     required: true,
   })
   @RequirePermission('system:role:edit')
+  @Operlog({ businessType: BusinessType.UPDATE })
   @Put()
   update(@Body() updateRoleDto: UpdateRoleDto) {
     return this.roleService.update(updateRoleDto);
@@ -83,6 +87,7 @@ export class RoleController {
     required: true,
   })
   @RequirePermission('system:role:edit')
+  @Operlog({ businessType: BusinessType.GRANT })
   @Put('dataScope')
   dataScope(@Body() updateRoleDto: UpdateRoleDto) {
     return this.roleService.dataScope(updateRoleDto);
@@ -96,12 +101,14 @@ export class RoleController {
     required: true,
   })
   @RequirePermission('system:role:edit')
+  @Operlog({ businessType: BusinessType.UPDATE })
   @Put('changeStatus')
   changeStatus(@Body() changeStatusDto: ChangeStatusDto) {
     return this.roleService.changeStatus(changeStatusDto);
   }
 
   @RequirePermission('system:role:remove')
+  @Operlog({ businessType: BusinessType.DELETE })
   @Delete(':id')
   remove(@Param('id') ids: string) {
     const menuIds = ids.split(',').map((id) => +id);
@@ -142,6 +149,7 @@ export class RoleController {
     required: true,
   })
   @RequirePermission('system:role:edit')
+  @Operlog({ businessType: BusinessType.GRANT })
   @Put('authUser/cancel')
   authUserCancel(@Body() body: AuthUserCancelDto) {
     return this.userService.authUserCancel(body);
@@ -155,6 +163,7 @@ export class RoleController {
     required: true,
   })
   @RequirePermission('system:role:edit')
+  @Operlog({ businessType: BusinessType.GRANT })
   @Put('authUser/cancelAll')
   authUserCancelAll(@Body() body: AuthUserCancelAllDto) {
     return this.userService.authUserCancelAll(body);
@@ -168,6 +177,7 @@ export class RoleController {
     required: true,
   })
   @RequirePermission('system:role:edit')
+  @Operlog({ businessType: BusinessType.GRANT })
   @Put('authUser/selectAll')
   authUserSelectAll(@Body() body: AuthUserSelectAllDto) {
     return this.userService.authUserSelectAll(body);
@@ -175,6 +185,7 @@ export class RoleController {
 
   @ApiOperation({ summary: '导出角色管理xlsx文件' })
   @RequirePermission('system:role:export')
+  @Operlog({ businessType: BusinessType.EXPORT })
   @Post('/export')
   async export(@Res() res: Response, @Body() body: ListRoleDto): Promise<void> {
     return this.roleService.export(res, body);

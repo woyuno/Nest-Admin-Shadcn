@@ -4,6 +4,8 @@ import { ToolService } from './tool.service';
 import { TableName, GenDbTableList, GenTableList, GenTableUpdate } from './dto/create-genTable-dto';
 import { Response } from 'express';
 import { User, UserDto } from 'src/module/system/user/user.decorator';
+import { BusinessType } from 'src/common/constant/business.constant';
+import { Operlog } from 'src/common/decorators/operlog.decorator';
 
 @ApiTags('系统工具')
 @Controller('tool')
@@ -23,12 +25,14 @@ export class ToolController {
   }
 
   @ApiOperation({ summary: '导入表' })
+  @Operlog({ businessType: BusinessType.IMPORT })
   @Post('/gen/importTable')
   genImportTable(@Body() table: TableName, @User() user: UserDto) {
     return this.toolService.importTable(table, user);
   }
 
   @ApiOperation({ summary: '同步表' })
+  @Operlog({ businessType: BusinessType.UPDATE })
   @Get('/gen/synchDb/:tableName')
   synchDb(@Param('tableName') tableName: string) {
     return this.toolService.synchDb(tableName);
@@ -41,18 +45,21 @@ export class ToolController {
   }
 
   @ApiOperation({ summary: '修改代码生成信息' })
+  @Operlog({ businessType: BusinessType.UPDATE })
   @Put('/gen')
   genUpdate(@Body() genTableUpdate: GenTableUpdate) {
     return this.toolService.genUpdate(genTableUpdate);
   }
 
   @ApiOperation({ summary: '删除表数据' })
+  @Operlog({ businessType: BusinessType.DELETE })
   @Delete('/gen/:id')
   remove(@Param('id') id: string) {
     return this.toolService.remove(+id);
   }
 
   @ApiOperation({ summary: '生成代码' })
+  @Operlog({ businessType: BusinessType.GENCODE })
   @Get('/gen/batchGenCode/zip')
   batchGenCode(@Query() tables: TableName, @Res() res: Response) {
     return this.toolService.batchGenCode(tables, res);

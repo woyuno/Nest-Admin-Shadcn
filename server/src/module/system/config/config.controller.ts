@@ -4,6 +4,8 @@ import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { ConfigService } from './config.service';
 import { CreateConfigDto, UpdateConfigDto, ListConfigDto } from './dto/index';
 import { RequirePermission } from 'src/common/decorators/require-premission.decorator';
+import { BusinessType } from 'src/common/constant/business.constant';
+import { Operlog } from 'src/common/decorators/operlog.decorator';
 
 @ApiTags('参数设置')
 @Controller('system/config')
@@ -18,6 +20,7 @@ export class ConfigController {
     type: CreateConfigDto,
   })
   @RequirePermission('system:config:add')
+  @Operlog({ businessType: BusinessType.INSERT })
   @Post()
   create(@Body() createConfigDto: CreateConfigDto, @Request() req) {
     createConfigDto['createBy'] = req.user.userName;
@@ -59,6 +62,7 @@ export class ConfigController {
     summary: '参数设置-更新',
   })
   @RequirePermission('system:config:edit')
+  @Operlog({ businessType: BusinessType.UPDATE })
   @Put()
   update(@Body() updateConfigDto: UpdateConfigDto) {
     return this.configService.update(updateConfigDto);
@@ -68,6 +72,7 @@ export class ConfigController {
     summary: '参数设置-刷新缓存',
   })
   @RequirePermission('system:config:remove')
+  @Operlog({ businessType: BusinessType.CLEAN })
   @Delete('/refreshCache')
   refreshCache() {
     return this.configService.resetConfigCache();
@@ -77,6 +82,7 @@ export class ConfigController {
     summary: '参数设置-删除',
   })
   @RequirePermission('system:config:remove')
+  @Operlog({ businessType: BusinessType.DELETE })
   @Delete(':id')
   remove(@Param('id') ids: string) {
     const configIds = ids.split(',').map((id) => +id);
@@ -85,6 +91,7 @@ export class ConfigController {
 
   @ApiOperation({ summary: '导出参数管理为xlsx文件' })
   @RequirePermission('system:config:export')
+  @Operlog({ businessType: BusinessType.EXPORT })
   @Post('/export')
   async export(@Res() res: Response, @Body() body: ListConfigDto): Promise<void> {
     return this.configService.export(res, body);
