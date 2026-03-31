@@ -39,10 +39,12 @@ export function useSidebarData(): SidebarData {
       {
         name: appConfig.name,
         logo: Command,
+        plan: '当前项目',
       },
       {
         name: '并行开发',
         logo: GalleryVerticalEnd,
+        plan: '迁移中',
       },
     ],
     navGroups: [

@@ -1,7 +1,7 @@
 import z from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
-import { assertRouteAccess } from '@/features/auth/lib/route-access'
-import { Notices } from '@/features/notices'
+import { assertRouteAccess } from '@/views/auth/lib/route-access'
+import { Notices } from '@/views/notices'
 
 const noticesSearchSchema = z.object({
   page: z.number().optional().catch(1),
@@ -21,3 +21,4 @@ export const Route = createFileRoute('/_authenticated/system/notice/')({
   },
   component: Notices,
 })
+

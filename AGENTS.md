@@ -18,8 +18,8 @@
 - `server/src/config/*.yml`：环境配置，按 `NODE_ENV` 映射
 - `server/db/nest-admin.sql`：初始化数据库脚本与示例数据
 - `admin-shadcn/src/routes`：基于文件的前端路由
-- `admin-shadcn/src/features`：按业务域组织的页面与逻辑
-- `admin-shadcn/src/features/auth/lib/page-registry.ts`：后端菜单到前端页面的静态映射表
+- `admin-shadcn/src/views`：按业务域组织的页面与逻辑
+- `admin-shadcn/src/views/auth/lib/page-registry.ts`：后端菜单到前端页面的静态映射表
 - `admin-shadcn/src/lib/request.ts`：统一 Axios 实例
 - `admin-shadcn/src/stores/auth-store.ts`：登录态、菜单上下文、权限上下文
 
@@ -88,7 +88,7 @@
 前端受两套信息共同约束：
 
 - 后端 `GET /getRouters` 返回的菜单树
-- 前端 `admin-shadcn/src/features/auth/lib/page-registry.ts` 中的映射和权限声明
+- 前端 `admin-shadcn/src/views/auth/lib/page-registry.ts` 中的映射和权限声明
 
 新增后台页面通常至少要同时处理：
 
@@ -112,7 +112,7 @@
 具体要求：
 
 - 后端优先沿用现有 Nest 模块模式：`controller + service + dto + entity/module`
-- 前端优先沿用现有 `features` 分层、TanStack Router、TanStack Query、shadcn/ui、既有 data-table 与表单封装
+- 前端优先沿用现有 `views` 分层、TanStack Router、TanStack Query、shadcn/ui、既有 data-table 与表单封装
 - 新增功能前，先查找并参考同类模块实现，保持接口风格、交互模式、目录结构、命名方式一致
 - 涉及菜单、权限、路由、审计日志、字典映射、图标注册等联动点时，必须按现有链路一起处理，不要只改其中一层
 - 如无明确必要，不新增新的状态管理库、请求库、表格方案、表单方案、图标方案或自定义基础设施
@@ -168,22 +168,22 @@
 2. 补 entity、dto、service、controller、module
 3. 在对应聚合模块注册，例如 `system.module.ts` 或 `monitor.module.ts`
 4. 如需菜单权限，补数据库菜单数据或相应管理入口
-5. 如需前端页面，再补前端 feature、route、registry 映射
+5. 如需前端页面，再补前端 view、route、registry 映射
 
 ### 新增前端后台页面
 
 优先参考已有模式，例如：
 
-- `admin-shadcn/src/features/users`
-- `admin-shadcn/src/features/roles`
-- `admin-shadcn/src/features/configs`
+- `admin-shadcn/src/views/users`
+- `admin-shadcn/src/views/roles`
+- `admin-shadcn/src/views/configs`
 
 建议顺序：
 
-1. `src/features/<domain>` 下建业务目录
+1. `src/views/<domain>` 下建业务目录
 2. `src/routes/_authenticated/...` 下建路由文件
 3. 在 `page-registry.ts` 中建立菜单路径或组件键映射
-4. 如需接口，补 `src/features/<domain>/api/*.ts`
+4. 如需接口，补 `src/views/<domain>/api/*.ts`
 5. 如需权限按钮，使用现有 `PermissionGuard`
 
 ## 验证建议
@@ -219,3 +219,4 @@
 - 保持中文为主，面向仓库协作者而不是外部营销文案
 - 优先写“这个仓库真实怎么工作”，不要写通用模板话术
 - 当发现新的关键联动约束时，优先更新本文件
+

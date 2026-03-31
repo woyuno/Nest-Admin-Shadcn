@@ -1,7 +1,7 @@
 import z from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
-import { assertRouteAccess } from '@/features/auth/lib/route-access'
-import { Depts } from '@/features/depts'
+import { assertRouteAccess } from '@/views/auth/lib/route-access'
+import { Depts } from '@/views/depts'
 
 const deptsSearchSchema = z.object({
   deptName: z.string().optional().catch(''),
@@ -18,3 +18,4 @@ export const Route = createFileRoute('/_authenticated/system/dept/')({
   },
   component: Depts,
 })
+

@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { logoutByToken } from '@/features/auth/api/auth'
+import { logoutByToken } from '@/views/auth/api/auth'
 import { useAuthStore } from '@/stores/auth-store'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 
@@ -44,3 +44,4 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
     />
   )
 }
+

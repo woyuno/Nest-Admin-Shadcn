@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { assertRouteAccess } from '@/features/auth/lib/route-access'
-import { ServerMonitor } from '@/features/server'
+import { assertRouteAccess } from '@/views/auth/lib/route-access'
+import { ServerMonitor } from '@/views/server'
 
 export const Route = createFileRoute('/_authenticated/monitor/server/')({
   beforeLoad: () => {
@@ -8,3 +8,4 @@ export const Route = createFileRoute('/_authenticated/monitor/server/')({
   },
   component: ServerMonitor,
 })
+

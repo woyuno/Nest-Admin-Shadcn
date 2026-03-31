@@ -1,7 +1,7 @@
 import z from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
-import { assertRouteAccess } from '@/features/auth/lib/route-access'
-import { Logininfor } from '@/features/logininfor'
+import { assertRouteAccess } from '@/views/auth/lib/route-access'
+import { Logininfor } from '@/views/logininfor'
 
 const logininforSearchSchema = z.object({
   page: z.number().optional().catch(1),
@@ -21,3 +21,4 @@ export const Route = createFileRoute('/_authenticated/monitor/logininfor/')({
   },
   component: Logininfor,
 })
+

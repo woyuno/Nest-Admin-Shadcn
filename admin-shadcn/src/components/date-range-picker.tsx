@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { format, isSameDay } from 'date-fns'
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { useState } from 'react'
 import { type DateRange } from 'react-day-picker'
@@ -18,9 +18,59 @@ type DateRangePickerProps = {
   className?: string
 }
 
+type DateRangeSelectionResult = {
+  draftRange: DateRange | undefined
+  committedRange: DateRange | undefined
+  shouldClose: boolean
+}
+
 function formatDateRange(range: DateRange) {
   if (!range.from || !range.to) return null
   return `${format(range.from, 'yyyy-MM-dd')} - ${format(range.to, 'yyyy-MM-dd')}`
+}
+
+export function resolveDateRangeSelection(
+  previousDraft: DateRange | undefined,
+  nextRange: DateRange | undefined
+): DateRangeSelectionResult {
+  if (!nextRange?.from && !nextRange?.to) {
+    return {
+      draftRange: undefined,
+      committedRange: undefined,
+      shouldClose: false,
+    }
+  }
+
+  if (nextRange?.from && nextRange?.to) {
+    const isConfirmedSameDayRange =
+      previousDraft?.from &&
+      !previousDraft.to &&
+      isSameDay(previousDraft.from, nextRange.from) &&
+      isSameDay(nextRange.from, nextRange.to)
+
+    if (!isConfirmedSameDayRange && isSameDay(nextRange.from, nextRange.to)) {
+      return {
+        draftRange: {
+          from: nextRange.from,
+          to: undefined,
+        },
+        committedRange: undefined,
+        shouldClose: false,
+      }
+    }
+
+    return {
+      draftRange: nextRange,
+      committedRange: nextRange,
+      shouldClose: true,
+    }
+  }
+
+  return {
+    draftRange: nextRange,
+    committedRange: undefined,
+    shouldClose: false,
+  }
 }
 
 export function DateRangePicker({
@@ -63,15 +113,21 @@ export function DateRangePicker({
           numberOfMonths={2}
           selected={draftRange}
           onSelect={(range) => {
-            setDraftRange(range)
+            const { draftRange: nextDraftRange, committedRange, shouldClose } =
+              resolveDateRangeSelection(draftRange, range)
 
-            if (!range?.from && !range?.to) {
+            setDraftRange(nextDraftRange)
+
+            if (!nextDraftRange) {
               onChange(undefined)
               return
             }
 
-            if (range?.from && range?.to) {
-              onChange(range)
+            if (committedRange) {
+              onChange(committedRange)
+            }
+
+            if (shouldClose) {
               setOpen(false)
             }
           }}

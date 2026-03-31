@@ -3,7 +3,7 @@ import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import {
   ensureAuthorizationContext,
   ensureCurrentUser,
-} from '@/features/auth/lib/auth-session'
+} from '@/views/auth/lib/auth-session'
 import { useAuthStore } from '@/stores/auth-store'
 
 export const Route = createFileRoute('/_authenticated')({
@@ -30,3 +30,4 @@ export const Route = createFileRoute('/_authenticated')({
   },
   component: AuthenticatedLayout,
 })
+
