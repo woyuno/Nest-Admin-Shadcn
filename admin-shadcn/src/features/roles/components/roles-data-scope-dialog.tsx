@@ -145,7 +145,7 @@ export function RolesDataScopeDialog({
             </div>
             {dataScope === '2' ? (
               <div className='space-y-3'>
-                <label className='flex items-center gap-2 text-sm'>
+                <label className='flex cursor-pointer items-center gap-2 text-sm'>
                   <Checkbox
                     checked={deptCheckStrictly}
                     onCheckedChange={(next) => setDeptCheckStrictly(Boolean(next))}

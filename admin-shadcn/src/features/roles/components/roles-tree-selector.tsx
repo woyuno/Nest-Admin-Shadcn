@@ -105,7 +105,7 @@ export function RolesTreeSelector({
             ) : (
               <span className='inline-block size-5' />
             )}
-            <label className='flex flex-1 items-center gap-2 text-sm'>
+            <label className='flex flex-1 cursor-pointer items-center gap-2 text-sm'>
               <Checkbox
                 checked={isChecked}
                 onCheckedChange={(nextChecked) =>

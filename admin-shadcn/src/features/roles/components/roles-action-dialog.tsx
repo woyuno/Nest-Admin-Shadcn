@@ -273,7 +273,7 @@ export function RolesActionDialog({
                       <FormItem>
                         <FormLabel>状态</FormLabel>
                         <div className='flex h-10 items-center gap-4 rounded-md border px-3'>
-                          <label className='flex items-center gap-2 text-sm'>
+                          <label className='flex cursor-pointer items-center gap-2 text-sm'>
                             <input
                               type='radio'
                               checked={field.value === '0'}
@@ -281,7 +281,7 @@ export function RolesActionDialog({
                             />
                             启用
                           </label>
-                          <label className='flex items-center gap-2 text-sm'>
+                          <label className='flex cursor-pointer items-center gap-2 text-sm'>
                             <input
                               type='radio'
                               checked={field.value === '1'}

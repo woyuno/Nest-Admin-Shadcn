@@ -119,7 +119,7 @@ export function UsersAuthRoleDialog({
                   return (
                     <label
                       key={role.roleId}
-                      className='flex items-center gap-2 text-sm'
+                      className='flex cursor-pointer items-center gap-2 text-sm'
                     >
                       <Checkbox
                         checked={checked}

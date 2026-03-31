@@ -395,7 +395,7 @@ export function UsersActionDialog({
                           return (
                             <label
                               key={item.value}
-                              className='flex items-center gap-2 text-sm'
+                              className='flex cursor-pointer items-center gap-2 text-sm'
                             >
                               <Checkbox
                                 checked={checked}
@@ -429,7 +429,7 @@ export function UsersActionDialog({
                           return (
                             <label
                               key={item.value}
-                              className='flex items-center gap-2 text-sm'
+                              className='flex cursor-pointer items-center gap-2 text-sm'
                             >
                               <Checkbox
                                 checked={checked}
