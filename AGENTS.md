@@ -9,7 +9,7 @@
 
 默认面向中国区用户，所有新增或修改的用户可见文案优先使用中文。
 
-## 目录约定
+## 目录与入口
 
 - `server/src`：后端源码
 - `server/src/module/main`：登录、退出、验证码、当前用户、动态路由
@@ -38,10 +38,9 @@
 - Swagger：`http://localhost:8080/swagger-ui/`
 - 前端：`http://localhost:5173`
 
-前端请求地址来自 `VITE_API_BASE_URL`。如果不设置，默认使用 `/`，这在本地直开 Vite 时通常会打到 5173 自身而不是 8080。联调时优先显式设置：
+前端请求地址来自 `VITE_API_BASE_URL`。本地联调时优先在 `admin-shadcn/.env.local` 中显式设置：
 
-- `admin-shadcn/.env.local`
-- 内容示例：`VITE_API_BASE_URL=http://localhost:8080`
+- `VITE_API_BASE_URL=http://localhost:8080`
 
 ## 运行前置条件
 
@@ -54,7 +53,7 @@
 - `server/src/config/test.yml` 和 `server/src/config/prod.yml` 被 `.gitignore` 忽略，需要自行创建
 - `server/src/config/dev.yml` 当前包含本地开发凭据示例，不要把真实生产凭据继续硬编码进去
 
-## 关键架构事实
+## 必须先知道的架构事实
 
 ### 1. 后端没有 API 前缀
 
@@ -66,11 +65,11 @@
 - `GET /captchaImage`
 - `GET /system/user/list`
 
-不要想当然加上 `/api`，除非同步改配置和前端请求。
+不要想当然加上 `/api`，除非同步修改后端配置和前端请求。
 
 ### 2. 登录态依赖 JWT + Redis
 
-- JWT 由 `Authorization: Bearer <token>` 传递
+- JWT 通过 `Authorization: Bearer <token>` 传递
 - `AuthStrategy` 不只校验 JWT，还会检查 Redis 中的登录 token
 - 只改 JWT 逻辑而不处理 Redis，会导致“token 看起来有效但请求仍被判定过期”
 
@@ -82,7 +81,7 @@
 - `RolesGuard`
 - `PermissionGuard`
 
-新增接口时，默认会被鉴权。匿名接口必须显式走现有免登录机制，不要只在前端放开。
+新增接口时默认会被鉴权。匿名接口必须显式走现有免登录机制，不要只在前端放开。
 
 ### 4. 前端菜单不是纯静态
 
@@ -91,31 +90,36 @@
 - 后端 `GET /getRouters` 返回的菜单树
 - 前端 `admin-shadcn/src/features/auth/lib/page-registry.ts` 中的映射和权限声明
 
-这意味着新增一个后台页面通常至少要同时处理：
+新增后台页面通常至少要同时处理：
 
 1. 后端菜单数据或菜单接口输出
 2. 前端页面路由文件
 3. `page-registry.ts` 映射
 4. 必要时页面内 `PermissionGuard` 权限点
 
-如果只加其中一部分，常见结果是：
-
-- 菜单出现但点击后 403
-- 页面存在但侧边栏不显示
-- 仪表盘提示“待映射菜单”
+如果只改其中一层，常见结果是菜单出现但无法进入、页面存在但侧边栏不显示，或权限按钮异常。
 
 ### 5. `routeTree.gen.ts` 是生成文件
 
 `admin-shadcn/src/routeTree.gen.ts` 由 TanStack Router 生成，不要手工维护。优先修改 `src/routes/**`。
 
-### 6. 以下目录通常不应直接改
+## 强约束
 
-- `**/node_modules`
-- `server/dist`
-- `admin-shadcn/dist`
-- `server/public/openApi.json`：运行后会重新生成
+### 1. 默认沿用仓库现有架构和实现方案
 
-### 7. 后端写接口默认必须接入操作日志
+后续开发默认优先沿用本仓库现有的架构分层、目录组织、状态管理、请求封装、表格与表单模式、权限控制和 UI 组件体系，不要在无充分理由时引入第二套并行方案。
+
+具体要求：
+
+- 后端优先沿用现有 Nest 模块模式：`controller + service + dto + entity/module`
+- 前端优先沿用现有 `features` 分层、TanStack Router、TanStack Query、shadcn/ui、既有 data-table 与表单封装
+- 新增功能前，先查找并参考同类模块实现，保持接口风格、交互模式、目录结构、命名方式一致
+- 涉及菜单、权限、路由、审计日志、字典映射、图标注册等联动点时，必须按现有链路一起处理，不要只改其中一层
+- 如无明确必要，不新增新的状态管理库、请求库、表格方案、表单方案、图标方案或自定义基础设施
+
+如果确实需要偏离现有方案，必须先确认现有实现无法满足需求，再尽量将影响范围控制在最小，并在改动说明中明确写出原因。
+
+### 2. 后端写接口默认必须接入操作日志
 
 后端新增或修改有业务副作用的接口时，默认必须在 controller 方法上补 `@Operlog`，不要只做权限控制而遗漏审计。
 
@@ -133,29 +137,32 @@
 - 仅返回详情、列表、树结构、下拉选项的接口
 - 明确属于临时凭证获取、纯预览、纯上传且无业务审计要求的接口
 
-新增写接口时，除了补 `@Operlog` 和合适的 `BusinessType`，还应同步更新
-`server/src/common/decorators/operlog-coverage.spec.ts`，
-确保后续测试能覆盖到该接口。
+新增写接口时，除了补 `@Operlog` 和合适的 `BusinessType`，还应同步更新 `server/src/common/decorators/operlog-coverage.spec.ts`。
 
-### 8. 默认沿用仓库现有架构和实现方案
+### 3. Git 提交信息默认使用中文
 
-后续开发默认优先沿用本仓库现有的架构分层、目录组织、状态管理、请求封装、表格与表单模式、权限控制和 UI 组件体系，不要在无充分理由时引入第二套并行方案。
+在本仓库中执行 `git commit` 时，提交信息默认使用中文，要求简洁、直接，能准确概括本次改动主题。
 
-具体要求：
+建议遵循：
 
-- 后端优先沿用现有 Nest 模块模式：`controller + service + dto + entity/module`
-- 前端优先沿用现有 `features` 分层、TanStack Router、TanStack Query、shadcn/ui、既有 data-table 与表单封装
-- 新增功能前，先查找并参考同类模块实现，保持接口风格、交互模式、目录结构、命名方式一致
-- 涉及菜单、权限、路由、审计日志、字典映射、图标注册等联动点时，必须按现有链路一起处理，不要只改其中一层
-- 如无明确必要，不新增新的状态管理库、请求库、表格方案、表单方案、图标方案或自定义基础设施
+- 优先使用中文动词开头，如“新增”“修复”“调整”“优化”“重构”“忽略”
+- 一次提交只描述一个主题，不把多个无关改动揉进同一条提交信息
+- 不使用空泛描述，如“update”“fix bug”“misc changes”“temp”
 
-如果确实需要偏离现有方案，必须先确认现有实现无法满足需求，再尽量将影响范围控制在最小，并在改动说明中明确写出原因。
+如果确实需要与外部规范对齐而使用英文提交信息，应在任务说明中明确提出，否则默认按中文提交。
 
-## 推荐改动路径
+### 4. 以下目录通常不应直接改
+
+- `**/node_modules`
+- `server/dist`
+- `admin-shadcn/dist`
+- `server/public/openApi.json`：运行后会重新生成
+
+## 常见改动路径
 
 ### 新增后端 CRUD 模块
 
-通常按这个顺序看现有模式：
+建议顺序：
 
 1. 找一个同类模块参考，例如 `server/src/module/system/config`
 2. 补 entity、dto、service、controller、module
