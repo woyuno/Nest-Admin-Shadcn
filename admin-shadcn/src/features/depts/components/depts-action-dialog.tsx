@@ -205,9 +205,12 @@ export function DeptsActionDialog({
                       <FormLabel>部门名称</FormLabel>
                       <FormControl>
                         <Input
-                          ref={deptNameInputRef}
                           placeholder='请输入部门名称'
                           {...field}
+                          ref={(node) => {
+                            field.ref(node)
+                            deptNameInputRef.current = node
+                          }}
                         />
                       </FormControl>
                       <FormMessage />

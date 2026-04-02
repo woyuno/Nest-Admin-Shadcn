@@ -155,7 +155,7 @@ export const menuIconOptions = menuIconRegistry.map((item) => ({
 
 export function resolveMenuIcon(iconKey?: string) {
   if (!iconKey) {
-    return null
+    return undefined
   }
 
   const normalizedKey = iconKey.trim().toLowerCase()

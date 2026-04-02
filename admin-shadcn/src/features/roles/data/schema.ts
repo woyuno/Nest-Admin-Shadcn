@@ -10,6 +10,7 @@ const roleSchema = z.object({
   roleKey: z.string(),
   roleSort: z.number(),
   status: roleStatusSchema,
+  remark: z.string().optional(),
   createdAt: z.coerce.date(),
 })
 

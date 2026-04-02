@@ -29,12 +29,20 @@ export function StatusBadge({
   )
 }
 
-export function ActiveStatusBadge({ status }: { status: 'active' | 'inactive' }) {
+export function ActiveStatusBadge({
+  status,
+}: {
+  status: 'active' | 'inactive' | 'invited' | 'suspended'
+}) {
+  const mapping = {
+    active: { label: '启用', tone: 'positive' as const },
+    inactive: { label: '停用', tone: 'neutral' as const },
+    invited: { label: '待激活', tone: 'warning' as const },
+    suspended: { label: '已停用', tone: 'danger' as const },
+  }
+
   return (
-    <StatusBadge
-      label={status === 'active' ? '启用' : '停用'}
-      tone={status === 'active' ? 'positive' : 'neutral'}
-    />
+    <StatusBadge {...mapping[status]} />
   )
 }
 

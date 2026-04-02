@@ -29,7 +29,6 @@ export function RolesMultiDeleteDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: rolesQueryKey })
       onDeleted?.()
-      setValue('')
       onOpenChange(false)
       toast.success(`已删除 ${selectedRoles.length} 个角色`)
     },
