@@ -5,7 +5,7 @@
 - `server`：NestJS 10 服务端
 - `admin-shadcn`：React 19 + shadcn/ui 管理端
 
-项目目标不是单纯展示 UI，而是提供一套可运行的后台基础能力，包括登录鉴权、菜单权限、系统管理、监控、缓存、定时任务和代码生成等模块。
+项目目标不是单纯展示 UI，而是提供一套可运行的后台基础能力，包括登录鉴权、菜单权限、系统管理、监控、缓存、定时任务等模块。
 
 ## 仓库结构
 
@@ -14,11 +14,12 @@ nest-admin/
 ├─ server/                # NestJS 后端
 │  ├─ src/
 │  │  ├─ module/main      # 登录、退出、验证码、当前用户、动态路由
-│  │  ├─ module/system    # 用户/角色/菜单/部门/岗位/字典/配置/通知/代码生成
+│  │  ├─ module/system    # 用户/角色/菜单/部门/岗位/字典/配置/通知
 │  │  ├─ module/monitor   # 在线用户/登录日志/操作日志/任务/缓存/服务监控
 │  │  ├─ module/upload    # 文件上传
 │  │  └─ config           # yml 环境配置
-│  └─ db/nest-admin.sql   # 初始化数据库脚本
+│  ├─ prisma/             # Prisma schema 与 migration
+│  └─ db/nest-admin.sql   # 初始化数据库快照
 ├─ admin-shadcn/          # React 管理端
 │  ├─ src/routes          # TanStack Router 文件路由
 │  ├─ src/features        # 业务模块
@@ -33,7 +34,7 @@ nest-admin/
 ### 后端
 
 - NestJS 10
-- TypeORM 0.3
+- Prisma 6
 - MySQL 8
 - Redis
 - Passport JWT
@@ -93,13 +94,26 @@ pnpm install
 - 数据库名：`nest-admin`
 - Redis：`localhost:6379`
 
-### 3. 导入初始化数据
+### 3. 初始化数据库
 
-将以下 SQL 导入 MySQL：
+先执行 Prisma migration，再按需导入 SQL 快照：
+
+```bash
+cd server
+yarn prisma:generate
+yarn prisma:migrate:deploy
+```
+
+快照文件位置：
 
 - `server/db/nest-admin.sql`
 
-该脚本包含系统表结构和示例数据，例如：
+数据库结构的真实来源是：
+
+- `server/prisma/schema.prisma`
+- `server/prisma/migrations`
+
+快照中包含示例数据，例如：
 
 - 管理员用户
 - 角色、菜单、权限点
@@ -239,10 +253,6 @@ pnpm lint
 - 缓存监控
 - 缓存列表
 
-### 系统工具
-
-- 代码生成
-
 ## 默认数据说明
 
 数据库脚本中包含管理员等示例数据，初始化密码相关配置默认是 `123456`。这适合本地体验，不适合直接带到共享或生产环境。
@@ -265,4 +275,6 @@ pnpm lint
 - 先读根目录 `AGENTS.md`，里面总结了适合 agent 和开发者遵循的真实项目约束
 - 改权限、菜单、路由时，不要只改一端
 - 改登录逻辑时，务必一起检查 Redis 登录态逻辑
+- 改数据库结构时，先改 `server/prisma/schema.prisma` 和 Prisma migration
+- 代码生成器已经移除，不再作为后续开发路径
 - 改环境配置时，优先把敏感信息移到本地私有配置

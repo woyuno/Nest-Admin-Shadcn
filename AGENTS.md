@@ -4,7 +4,7 @@
 
 这是一个前后端分离的 Nest-Admin-Shadcn 仓库，根目录本身不是可直接运行的 Node 项目，主要包含两个子应用：
 
-- `server`：NestJS 10 后端，TypeORM + MySQL + Redis
+- `server`：NestJS 10 后端，Prisma + MySQL + Redis
 - `admin-shadcn`：React 19 管理端，Vite 8 + TanStack Router + TanStack Query + shadcn/ui
 
 默认面向中国区用户，所有新增或修改的用户可见文案优先使用中文。
@@ -13,10 +13,12 @@
 
 - `server/src`：后端源码
 - `server/src/module/main`：登录、退出、验证码、当前用户、动态路由
-- `server/src/module/system`：系统管理模块，含用户、角色、菜单、部门、岗位、字典、配置、通知、代码生成
+- `server/src/module/system`：系统管理模块，含用户、角色、菜单、部门、岗位、字典、配置、通知
 - `server/src/module/monitor`：系统监控模块，含在线用户、登录日志、操作日志、任务、缓存、服务监控
 - `server/src/config/*.yml`：环境配置，按 `NODE_ENV` 映射
-- `server/db/nest-admin.sql`：初始化数据库脚本与示例数据
+- `server/prisma/schema.prisma`：Prisma 数据模型真相来源
+- `server/prisma/migrations`：数据库结构迁移历史
+- `server/db/nest-admin.sql`：初始化数据库快照与示例数据
 - `admin-shadcn/src/routes`：基于文件的前端路由
 - `admin-shadcn/src/features`：按业务域组织的页面与逻辑
 - `admin-shadcn/src/features/auth/lib/page-registry.ts`：后端菜单到前端页面的静态映射表
@@ -46,7 +48,8 @@
 
 - MySQL 8，默认开发配置写在 `server/src/config/dev.yml`
 - Redis，默认开发配置也写在 `server/src/config/dev.yml`
-- 初始化数据来自 `server/db/nest-admin.sql`
+- 结构迁移来自 `server/prisma/schema.prisma` + `server/prisma/migrations`
+- 演示数据快照来自 `server/db/nest-admin.sql`
 
 注意：
 
@@ -111,13 +114,20 @@
 
 具体要求：
 
-- 后端优先沿用现有 Nest 模块模式：`controller + service + dto + entity/module`
+- 后端优先沿用现有 Nest 模块模式：`controller + service + dto + module`
 - 前端优先沿用现有 `features` 分层、TanStack Router、TanStack Query、shadcn/ui、既有 data-table 与表单封装
 - 新增功能前，先查找并参考同类模块实现，保持接口风格、交互模式、目录结构、命名方式一致
 - 涉及菜单、权限、路由、审计日志、字典映射、图标注册等联动点时，必须按现有链路一起处理，不要只改其中一层
 - 如无明确必要，不新增新的状态管理库、请求库、表格方案、表单方案、图标方案或自定义基础设施
 
 如果确实需要偏离现有方案，必须先确认现有实现无法满足需求，再尽量将影响范围控制在最小，并在改动说明中明确写出原因。
+
+当前后端数据库访问统一使用 Prisma：
+
+- 表结构变更先改 `server/prisma/schema.prisma`
+- 再通过 Prisma migration 演进数据库
+- 业务查询统一通过 `PrismaService`
+- 不再新增 TypeORM entity、repository 或 `TypeOrmModule` 用法
 
 ### 2. 后端写接口默认必须接入操作日志
 
@@ -128,8 +138,7 @@
 - 新增、修改、删除
 - 授权、分配、解绑
 - 重置密码、状态切换、强退
-- 导入、导出、清空缓存、清空日志
-- 生成代码、同步表等会改变系统状态或触发关键业务动作的接口
+- 导入、导出、清空缓存、清空日志等会改变系统状态或触发关键业务动作的接口
 
 默认不接入的范围包括：
 
@@ -165,7 +174,7 @@
 建议顺序：
 
 1. 找一个同类模块参考，例如 `server/src/module/system/config`
-2. 补 entity、dto、service、controller、module
+2. 补 dto、service、controller、module，数据库模型统一维护在 Prisma schema 中
 3. 在对应聚合模块注册，例如 `system.module.ts` 或 `monitor.module.ts`
 4. 如需菜单权限，补数据库菜单数据或相应管理入口
 5. 如需前端页面，再补前端 feature、route、registry 映射
@@ -213,6 +222,7 @@
 - Swagger 已启用并写出 OpenAPI 文件
 - 数据库脚本中存在默认管理员数据，初始化密码相关配置为 `123456`
 - 前端包含一套 Clerk 演示路由，但主登录流仍是本仓库后端的账号密码登录
+- 代码生成器功能已移除，不再维护对应前后端入口
 
 ## 文档维护原则
 
