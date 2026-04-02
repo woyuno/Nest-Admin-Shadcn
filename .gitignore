@@ -10,3 +10,4 @@ admin-start.log
 admin-start.err.log
 server-start.log
 server-start.err.log
+.worktrees/
