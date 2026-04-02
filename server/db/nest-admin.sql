@@ -1,3 +1,7 @@
+-- 本文件为开发初始化快照/导出产物，用于初始化或校对演示数据。
+-- 数据结构真相来源已切换为 `server/prisma/schema.prisma` 与 `server/prisma/migrations`。
+-- 后续表结构变更请先修改 Prisma schema 并生成 migration，再按需重新导出本文件。
+-- 下方若保留历史导出工具信息，仅作为当次导出记录，不代表当前开发环境数据库连接配置。
 /*
  Navicat Premium Dump SQL
 

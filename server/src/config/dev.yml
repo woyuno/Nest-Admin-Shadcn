@@ -33,6 +33,8 @@ db:
     password: 'root'
     database: 'nest-admin'
     port: 3306
+    # Prisma 连接优先使用 DATABASE_URL；留空时由配置读取层基于 host/port/username/password/database 自动拼接
+    url: ''
     charset: 'utf8mb4'
     logger: 'file'
     logging: true
