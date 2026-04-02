@@ -6,6 +6,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from 'src/common/guards/auth.guard';
 import { PermissionGuard } from 'src/common/guards/permission.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { PrismaModule } from './prisma/prisma.module';
 
 import { MainModule } from './module/main/main.module';
 import { UploadModule } from './module/upload/upload.module';
@@ -16,13 +17,11 @@ import { MonitorModule } from './module/monitor/monitor.module';
 @Global()
 @Module({
   imports: [
-    // 配置模块
     ConfigModule.forRoot({
       cache: true,
       load: [configuration],
       isGlobal: true,
     }),
-    // 数据库
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -37,7 +36,7 @@ import { MonitorModule } from './module/monitor/monitor.module';
         } as TypeOrmModuleOptions;
       },
     }),
-
+    PrismaModule,
     MainModule,
     UploadModule,
 
