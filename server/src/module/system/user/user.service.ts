@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { SysDept, SysMenu, SysPost, SysRole, SysUser } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { Response } from 'express';
 import { GenerateUUID, Uniq } from 'src/common/utils/index';
@@ -10,13 +11,9 @@ import { ResultData } from 'src/common/utils/result';
 import { CreateUserDto, UpdateUserDto, ListUserDto, ChangeStatusDto, ResetPwdDto, AllocatedListDto, UpdateProfileDto, UpdatePwdDto } from './dto/index';
 import { RegisterDto, LoginDto } from '../../main/dto/index';
 import { AuthUserCancelDto, AuthUserCancelAllDto, AuthUserSelectAllDto } from '../role/dto/index';
-import { SysPostEntity } from '../post/entities/post.entity';
-import { SysDeptEntity } from '../dept/entities/dept.entity';
 import { RoleService } from '../role/role.service';
 import { DeptService } from '../dept/dept.service';
 import { ConfigService } from '../config/config.service';
-import { SysRoleEntity } from '../role/entities/role.entity';
-import { SysMenuEntity } from '../menu/entities/menu.entity';
 import { UserType } from './dto/user';
 import { ClientInfoDto } from 'src/common/decorators/common.decorator';
 import { RedisService } from 'src/module/common/redis/redis.service';
@@ -24,7 +21,6 @@ import { Cacheable, CacheEvict } from 'src/common/decorators/redis.decorator';
 import { Captcha } from 'src/common/decorators/captcha.decorator';
 import { buildAssignedUserRoles, mergeUsersWithRoles } from './user-list-role.helper';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { UserEntity } from './entities/sys-user.entity';
 
 @Injectable()
 export class UserService {
@@ -96,7 +92,7 @@ export class UserService {
     });
   }
 
-  private async attachRolesForUsers<T extends { userId: number }>(users: T[]): Promise<Array<T & { roles: SysRoleEntity[] }>> {
+  private async attachRolesForUsers<T extends { userId: number }>(users: T[]): Promise<Array<T & { roles: SysRole[] }>> {
     if (users.length === 0) {
       return [];
     }
@@ -388,10 +384,10 @@ export class UserService {
   async getUserPermissions(userId: number) {
     const roleIds = await this.getRoleIds([userId]);
     const list = await this.roleService.getPermissionsByRoleIds(roleIds);
-    return Uniq(list.map((item: SysMenuEntity) => item.perms)).filter((item) => item);
+    return Uniq(list.map((item: SysMenu) => item.perms)).filter((item) => item);
   }
 
-  async getUserinfo(userId: number): Promise<({ dept: SysDeptEntity; roles: Array<SysRoleEntity>; posts: Array<SysPostEntity> } & UserEntity) | null> {
+  async getUserinfo(userId: number): Promise<({ dept: SysDept | null; roles: Array<SysRole>; posts: Array<SysPost> } & SysUser) | null> {
     const data = await this.prisma.sysUser.findUnique({
       where: {
         userId,
@@ -418,10 +414,10 @@ export class UserService {
     const { roleBindings, postBindings, ...user } = data;
 
     return {
-      ...(user as UserEntity),
-      dept: data.dept as SysDeptEntity,
-      roles: roleBindings.map((item) => item.role).filter((item) => item && item.delFlag === '0') as unknown as SysRoleEntity[],
-      posts: postBindings.map((item) => item.post).filter((item) => item && item.delFlag === '0') as unknown as SysPostEntity[],
+      ...(user as SysUser),
+      dept: data.dept as SysDept | null,
+      roles: roleBindings.map((item) => item.role).filter((item) => item && item.delFlag === '0') as SysRole[],
+      posts: postBindings.map((item) => item.post).filter((item) => item && item.delFlag === '0') as SysPost[],
     };
   }
 

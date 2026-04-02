@@ -1,7 +1,4 @@
-import { SysDeptEntity } from '../../dept/entities/dept.entity';
-import { SysPostEntity } from '../../post/entities/post.entity';
-import { SysRoleEntity } from '../../role/entities/role.entity';
-import { UserEntity } from '../entities/sys-user.entity';
+import { SysDept, SysPost, SysRole, SysUser } from '@prisma/client';
 
 export type UserType = {
   browser: string;
@@ -13,10 +10,10 @@ export type UserType = {
   roles: string[];
   token: string;
   user: {
-    dept: SysDeptEntity;
-    roles: Array<SysRoleEntity>;
-    posts: Array<SysPostEntity>;
-  } & UserEntity;
+    dept: SysDept | null;
+    roles: Array<SysRole>;
+    posts: Array<SysPost>;
+  } & SysUser;
   userId: number;
   userName: string;
   deptId: number;

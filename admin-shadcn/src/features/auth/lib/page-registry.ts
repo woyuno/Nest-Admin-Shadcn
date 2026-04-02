@@ -112,11 +112,4 @@ export const frontendPageRegistry: FrontendPageRegistryItem[] = [
     componentKeys: ['monitor/cache/list'],
     requiredPermissions: ['monitor:cache:list'],
   },
-  {
-    routePath: '/tool/gen',
-    title: '代码生成',
-    menuPaths: ['/tool/gen'],
-    componentKeys: ['tool/gen/index'],
-    requiredPermissions: ['tool:gen:list'],
-  },
 ]

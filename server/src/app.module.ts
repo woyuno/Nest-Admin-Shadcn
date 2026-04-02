@@ -1,6 +1,5 @@
 import { Module, Global } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import configuration from './config/index';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from 'src/common/guards/auth.guard';
@@ -21,20 +20,6 @@ import { MonitorModule } from './module/monitor/monitor.module';
       cache: true,
       load: [configuration],
       isGlobal: true,
-    }),
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        return {
-          type: 'mysql',
-          entities: [`${__dirname}/**/*.entity{.ts,.js}`],
-          autoLoadEntities: true,
-          keepConnectionAlive: true,
-          timezone: '+08:00',
-          ...config.get('db.mysql'),
-        } as TypeOrmModuleOptions;
-      },
     }),
     PrismaModule,
     MainModule,
