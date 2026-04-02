@@ -1,181 +1,197 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
 import { ResultData } from 'src/common/utils/result';
-import { SysDeptEntity } from './entities/dept.entity';
 import { CreateDeptDto, UpdateDeptDto, ListDeptDto } from './dto/index';
 import { ListToTree } from 'src/common/utils/index';
 import { CacheEnum, DataScopeEnum } from 'src/common/enum/index';
 import { Cacheable, CacheEvict } from 'src/common/decorators/redis.decorator';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class DeptService {
-  constructor(
-    @InjectRepository(SysDeptEntity)
-    private readonly sysDeptEntityRep: Repository<SysDeptEntity>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   @CacheEvict(CacheEnum.SYS_DEPT_KEY, '*')
   async create(createDeptDto: CreateDeptDto) {
-    if (createDeptDto.parentId) {
-      const parent = await this.sysDeptEntityRep.findOne({
+    const data = {
+      parentId: createDeptDto.parentId,
+      deptName: createDeptDto.deptName,
+      orderNum: createDeptDto.orderNum,
+      leader: createDeptDto.leader ?? '',
+      phone: createDeptDto.phone ?? '',
+      email: createDeptDto.email ?? '',
+      status: createDeptDto.status ?? '0',
+      ancestors: undefined as string | undefined,
+    };
+
+    if (data.parentId) {
+      const parent = await this.prisma.sysDept.findUnique({
         where: {
-          deptId: createDeptDto.parentId,
-          delFlag: '0',
+          deptId: data.parentId,
         },
-        select: ['ancestors'],
+        select: {
+          ancestors: true,
+          delFlag: true,
+        },
       });
-      if (!parent) {
+
+      if (!parent || parent.delFlag !== '0') {
         return ResultData.fail(500, '父级部门不存在');
       }
-      const ancestors = parent.ancestors ? `${parent.ancestors},${createDeptDto.parentId}` : `${createDeptDto.parentId}`;
-      Object.assign(createDeptDto, { ancestors: ancestors });
+
+      data.ancestors = parent.ancestors ? `${parent.ancestors},${data.parentId}` : `${data.parentId}`;
     }
-    await this.sysDeptEntityRep.save(createDeptDto);
+
+    await this.prisma.sysDept.create({
+      data,
+    });
     return ResultData.ok();
   }
 
   async findAll(query: ListDeptDto) {
-    const entity = this.sysDeptEntityRep.createQueryBuilder('entity');
-    entity.where('entity.delFlag = :delFlag', { delFlag: '0' });
-
-    if (query.deptName) {
-      entity.andWhere(`entity.deptName LIKE "%${query.deptName}%"`);
-    }
-    if (query.status) {
-      entity.andWhere('entity.status = :status', { status: query.status });
-    }
-    const res = await entity.getMany();
+    const where = this.buildWhere(query);
+    const res = await this.prisma.sysDept.findMany({
+      where,
+      orderBy: [{ parentId: 'asc' }, { orderNum: 'asc' }],
+    });
     return ResultData.ok(res);
   }
 
   @Cacheable(CacheEnum.SYS_DEPT_KEY, 'findOne:{deptId}')
   async findOne(deptId: number) {
-    const data = await this.sysDeptEntityRep.findOne({
+    const data = await this.prisma.sysDept.findFirst({
       where: {
-        deptId: deptId,
+        deptId,
         delFlag: '0',
       },
     });
     return ResultData.ok(data);
   }
 
-  /**
-   * 根据数据权限范围和部门ID查询部门ID列表。
-   * @param deptId 部门ID，表示需要查询的部门。
-   * @param dataScope 数据权限范围，决定查询的部门范围。
-   * @returns 返回一个部门ID数组，根据数据权限范围决定返回的部门ID集合。
-   */
   @Cacheable(CacheEnum.SYS_DEPT_KEY, 'findDeptIdsByDataScope:{deptId}-{dataScope}')
   async findDeptIdsByDataScope(deptId: number, dataScope: DataScopeEnum) {
-    try {
-      // 创建部门实体的查询构建器
-      const entity = this.sysDeptEntityRep.createQueryBuilder('dept');
-      // 筛选出删除标志为未删除的部门
-      entity.where('dept.delFlag = :delFlag', { delFlag: '0' });
-
-      // 根据不同的数据权限范围添加不同的查询条件
-      if (dataScope === DataScopeEnum.DATA_SCOPE_DEPT) {
-        // 如果是本部门数据权限，则只查询指定部门
-        this.addQueryForDeptDataScope(entity, deptId);
-      } else if (dataScope === DataScopeEnum.DATA_SCOPE_DEPT_AND_CHILD) {
-        // 如果是本部门及子部门数据权限，则查询指定部门及其所有子部门
-        this.addQueryForDeptAndChildDataScope(entity, deptId);
-      } else if (dataScope === DataScopeEnum.DATA_SCOPE_SELF) {
-        // 如果是仅本人数据权限，则不查询任何部门，直接返回空数组
-        return [];
-      }
-      // 执行查询并获取结果
-      const list = await entity.getMany();
-      // 将查询结果映射为部门ID数组后返回
-      return list.map((item) => item.deptId);
-    } catch (error) {
-      console.error('Failed to query department IDs:', error);
-      throw new Error('Querying department IDs failed');
+    if (dataScope === DataScopeEnum.DATA_SCOPE_SELF) {
+      return [];
     }
-  }
 
-  /**
-   * 添加查询条件以适应本部门数据权限范围。
-   * @param queryBuilder 查询构建器实例
-   * @param deptId 部门ID
-   */
-  private addQueryForDeptDataScope(queryBuilder: SelectQueryBuilder<any>, deptId: number) {
-    queryBuilder.andWhere('dept.deptId = :deptId', { deptId: deptId });
-  }
+    const where: Record<string, unknown> = {
+      delFlag: '0',
+    };
 
-  /**
-   * 添加查询条件以适应本部门及子部门数据权限范围。
-   * @param queryBuilder 查询构建器实例
-   * @param deptId 部门ID
-   */
-  private addQueryForDeptAndChildDataScope(queryBuilder: SelectQueryBuilder<any>, deptId: number) {
-    // 使用参数化查询以防止SQL注入
-    queryBuilder
-      .andWhere('dept.ancestors LIKE :ancestors', {
-        ancestors: `%${deptId}%`,
-      })
-      .orWhere('dept.deptId = :deptId', { deptId: deptId });
+    if (dataScope === DataScopeEnum.DATA_SCOPE_DEPT) {
+      where.deptId = deptId;
+    } else if (dataScope === DataScopeEnum.DATA_SCOPE_DEPT_AND_CHILD) {
+      where.OR = [
+        { deptId },
+        { ancestors: `${deptId}` },
+        { ancestors: { startsWith: `${deptId},` } },
+        { ancestors: { endsWith: `,${deptId}` } },
+        { ancestors: { contains: `,${deptId},` } },
+      ];
+    }
+
+    const list = await this.prisma.sysDept.findMany({
+      where,
+      select: {
+        deptId: true,
+      },
+      orderBy: [{ parentId: 'asc' }, { orderNum: 'asc' }],
+    });
+
+    return list.map((item) => item.deptId);
   }
 
   @Cacheable(CacheEnum.SYS_DEPT_KEY, 'findListExclude')
   async findListExclude(id: number) {
-    //TODO 需排出ancestors 中不出现id的数据
-    const data = await this.sysDeptEntityRep.find({
+    const data = await this.prisma.sysDept.findMany({
       where: {
         delFlag: '0',
       },
     });
-    return ResultData.ok(data);
+
+    return ResultData.ok(data.filter((item) => item.deptId !== id && !item.ancestors.split(',').includes(`${id}`)));
   }
 
   @CacheEvict(CacheEnum.SYS_DEPT_KEY, '*')
   async update(updateDeptDto: UpdateDeptDto) {
+    const data = {
+      deptName: updateDeptDto.deptName,
+      parentId: updateDeptDto.parentId,
+      orderNum: updateDeptDto.orderNum,
+      leader: updateDeptDto.leader ?? '',
+      phone: updateDeptDto.phone ?? '',
+      email: updateDeptDto.email ?? '',
+      status: updateDeptDto.status ?? '0',
+      ancestors: undefined as string | undefined,
+    };
+
     if (updateDeptDto.parentId && updateDeptDto.parentId !== 0) {
-      const parent = await this.sysDeptEntityRep.findOne({
+      const parent = await this.prisma.sysDept.findUnique({
         where: {
           deptId: updateDeptDto.parentId,
-          delFlag: '0',
         },
-        select: ['ancestors'],
+        select: {
+          ancestors: true,
+          delFlag: true,
+        },
       });
-      if (!parent) {
+
+      if (!parent || parent.delFlag !== '0') {
         return ResultData.fail(500, '父级部门不存在');
       }
-      const ancestors = parent.ancestors ? `${parent.ancestors},${updateDeptDto.parentId}` : `${updateDeptDto.parentId}`;
-      Object.assign(updateDeptDto, { ancestors: ancestors });
+
+      data.ancestors = parent.ancestors ? `${parent.ancestors},${updateDeptDto.parentId}` : `${updateDeptDto.parentId}`;
     }
-    await this.sysDeptEntityRep.update({ deptId: updateDeptDto.deptId }, updateDeptDto);
+
+    await this.prisma.sysDept.update({
+      where: {
+        deptId: updateDeptDto.deptId,
+      },
+      data,
+    });
     return ResultData.ok();
   }
 
   @CacheEvict(CacheEnum.SYS_DEPT_KEY, '*')
   async remove(deptId: number) {
-    const data = await this.sysDeptEntityRep.update(
-      { deptId: deptId },
-      {
+    const data = await this.prisma.sysDept.update({
+      where: {
+        deptId,
+      },
+      data: {
         delFlag: '1',
       },
-    );
+    });
     return ResultData.ok(data);
   }
 
-  /**
-   * 部门树
-   * @returns
-   */
   @Cacheable(CacheEnum.SYS_DEPT_KEY, 'deptTree')
   async deptTree() {
-    const res = await this.sysDeptEntityRep.find({
+    const res = await this.prisma.sysDept.findMany({
       where: {
         delFlag: '0',
       },
+      orderBy: [{ parentId: 'asc' }, { orderNum: 'asc' }],
     });
-    const tree = ListToTree(
+    return ListToTree(
       res,
       (m) => m.deptId,
       (m) => m.deptName,
     );
-    return tree;
+  }
+
+  private buildWhere(query: ListDeptDto) {
+    const where: Record<string, unknown> = {
+      delFlag: '0',
+    };
+
+    if (query.deptName) {
+      where.deptName = { contains: query.deptName };
+    }
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    return where;
   }
 }

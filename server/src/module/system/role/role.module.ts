@@ -1,15 +1,11 @@
 import { Global, Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { RoleService } from './role.service';
 import { RoleController } from './role.controller';
-import { SysRoleEntity } from './entities/role.entity';
-import { SysRoleWithMenuEntity } from './entities/role-width-menu.entity';
-import { SysRoleWithDeptEntity } from './entities/role-width-dept.entity';
-import { SysDeptEntity } from '../dept/entities/dept.entity';
+import { PrismaModule } from 'src/prisma/prisma.module';
 
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([SysRoleEntity, SysRoleWithMenuEntity, SysRoleWithDeptEntity, SysDeptEntity])],
+  imports: [PrismaModule],
   controllers: [RoleController],
   providers: [RoleService],
   exports: [RoleService],

@@ -1,12 +1,11 @@
 import { Global, Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { DeptService } from './dept.service';
 import { DeptController } from './dept.controller';
-import { SysDeptEntity } from './entities/dept.entity';
+import { PrismaModule } from 'src/prisma/prisma.module';
 
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([SysDeptEntity])],
+  imports: [PrismaModule],
   controllers: [DeptController],
   providers: [DeptService],
   exports: [DeptService],

@@ -1,44 +1,44 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
 import { ResultData } from 'src/common/utils/result';
 import { ExportTable } from 'src/common/utils/export';
-import { SysPostEntity } from './entities/post.entity';
 import { Response } from 'express';
 import { CreatePostDto, UpdatePostDto, ListPostDto } from './dto/index';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class PostService {
-  constructor(
-    @InjectRepository(SysPostEntity)
-    private readonly sysPostEntityRep: Repository<SysPostEntity>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
+
   async create(createPostDto: CreatePostDto) {
-    await this.sysPostEntityRep.save(createPostDto);
+    await this.prisma.sysPost.create({
+      data: createPostDto,
+    });
     return ResultData.ok();
   }
 
   async findAll(query: ListPostDto) {
-    const entity = this.sysPostEntityRep.createQueryBuilder('entity');
-    entity.where('entity.delFlag = :delFlag', { delFlag: '0' });
-
-    if (query.postName) {
-      entity.andWhere(`entity.postName LIKE "%${query.postName}%"`);
-    }
-
-    if (query.postCode) {
-      entity.andWhere(`entity.postCode LIKE "%${query.postCode}%"`);
-    }
-
-    if (query.status) {
-      entity.andWhere('entity.status = :status', { status: query.status });
-    }
+    const where = this.buildWhere(query);
+    const findManyArgs: {
+      where: Record<string, unknown>;
+      skip?: number;
+      take?: number;
+      orderBy: Array<Record<string, 'asc' | 'desc'>>;
+    } = {
+      where,
+      orderBy: [{ postSort: 'asc' }, { postId: 'asc' }],
+    };
 
     if (query.pageSize && query.pageNum) {
-      entity.skip(query.pageSize * (query.pageNum - 1)).take(query.pageSize);
+      const pageSize = Number(query.pageSize);
+      const pageNum = Number(query.pageNum);
+      findManyArgs.skip = pageSize * (pageNum - 1);
+      findManyArgs.take = pageSize;
     }
 
-    const [list, total] = await entity.getManyAndCount();
+    const [list, total] = await Promise.all([
+      this.prisma.sysPost.findMany(findManyArgs),
+      this.prisma.sysPost.count({ where }),
+    ]);
 
     return ResultData.ok({
       list,
@@ -47,9 +47,9 @@ export class PostService {
   }
 
   async findOne(postId: number) {
-    const res = await this.sysPostEntityRep.findOne({
+    const res = await this.prisma.sysPost.findFirst({
       where: {
-        postId: postId,
+        postId,
         delFlag: '0',
       },
     });
@@ -57,24 +57,30 @@ export class PostService {
   }
 
   async update(updatePostDto: UpdatePostDto) {
-    const res = await this.sysPostEntityRep.update({ postId: updatePostDto.postId }, updatePostDto);
+    const { postId, ...data } = updatePostDto;
+    const res = await this.prisma.sysPost.update({
+      where: {
+        postId,
+      },
+      data,
+    });
     return ResultData.ok(res);
   }
 
   async remove(postIds: string[]) {
-    const data = await this.sysPostEntityRep.update(
-      { postId: In(postIds) },
-      {
+    const data = await this.prisma.sysPost.updateMany({
+      where: {
+        postId: {
+          in: postIds.map((id) => Number(id)),
+        },
+      },
+      data: {
         delFlag: '1',
       },
-    );
+    });
     return ResultData.ok(data);
   }
 
-  /**
-   * 导出岗位管理数据为xlsx文件
-   * @param res
-   */
   async export(res: Response, body: ListPostDto) {
     delete body.pageNum;
     delete body.pageSize;
@@ -91,5 +97,25 @@ export class PostService {
       ],
     };
     ExportTable(options, res);
+  }
+
+  private buildWhere(query: ListPostDto) {
+    const where: Record<string, unknown> = {
+      delFlag: '0',
+    };
+
+    if (query.postName) {
+      where.postName = { contains: query.postName };
+    }
+
+    if (query.postCode) {
+      where.postCode = { contains: query.postCode };
+    }
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    return where;
   }
 }
