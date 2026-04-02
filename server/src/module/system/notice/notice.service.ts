@@ -1,43 +1,58 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
 import { ResultData } from 'src/common/utils/result';
-import { SysNoticeEntity } from './entities/notice.entity';
 import { CreateNoticeDto, UpdateNoticeDto, ListNoticeDto } from './dto/index';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class NoticeService {
   constructor(
-    @InjectRepository(SysNoticeEntity)
-    private readonly sysNoticeEntityRep: Repository<SysNoticeEntity>,
+    private readonly prisma: PrismaService,
   ) {}
   async create(createNoticeDto: CreateNoticeDto) {
-    await this.sysNoticeEntityRep.save(createNoticeDto);
+    await this.prisma.sysNotice.create({
+      data: createNoticeDto,
+    });
     return ResultData.ok();
   }
 
   async findAll(query: ListNoticeDto) {
-    const entity = this.sysNoticeEntityRep.createQueryBuilder('entity');
-    entity.where('entity.delFlag = :delFlag', { delFlag: '0' });
+    const where: Record<string, unknown> = {
+      delFlag: '0',
+    };
 
     if (query.noticeTitle) {
-      entity.andWhere(`entity.noticeTitle LIKE "%${query.noticeTitle}%"`);
+      where.noticeTitle = { contains: query.noticeTitle };
     }
 
     if (query.createBy) {
-      entity.andWhere(`entity.createBy LIKE "%${query.createBy}%"`);
+      where.createBy = { contains: query.createBy };
     }
 
     if (query.noticeType) {
-      entity.andWhere('entity.noticeType = :noticeType', { noticeType: query.noticeType });
+      where.noticeType = query.noticeType;
     }
 
     if (query.params?.beginTime && query.params?.endTime) {
-      entity.andWhere('entity.createTime BETWEEN :start AND :end', { start: query.params.beginTime, end: query.params.endTime });
+      where.createTime = {
+        gte: new Date(query.params.beginTime),
+        lte: new Date(query.params.endTime),
+      };
     }
 
-    entity.skip(query.pageSize * (query.pageNum - 1)).take(query.pageSize);
-    const [list, total] = await entity.getManyAndCount();
+    const findManyArgs: {
+      where: Record<string, unknown>;
+      skip?: number;
+      take?: number;
+    } = { where };
+
+    if (query.pageSize && query.pageNum) {
+      const pageSize = Number(query.pageSize);
+      const pageNum = Number(query.pageNum);
+      findManyArgs.skip = pageSize * (pageNum - 1);
+      findManyArgs.take = pageSize;
+    }
+
+    const [list, total] = await Promise.all([this.prisma.sysNotice.findMany(findManyArgs), this.prisma.sysNotice.count({ where })]);
 
     return ResultData.ok({
       list,
@@ -46,31 +61,30 @@ export class NoticeService {
   }
 
   async findOne(noticeId: number) {
-    const data = await this.sysNoticeEntityRep.findOne({
+    const data = await this.prisma.sysNotice.findUnique({
       where: {
-        noticeId: noticeId,
+        noticeId,
       },
     });
     return ResultData.ok(data);
   }
 
   async update(updateNoticeDto: UpdateNoticeDto) {
-    await this.sysNoticeEntityRep.update(
-      {
-        noticeId: updateNoticeDto.noticeId,
-      },
-      updateNoticeDto,
-    );
+    const { noticeId, ...data } = updateNoticeDto;
+    await this.prisma.sysNotice.update({
+      where: { noticeId },
+      data,
+    });
     return ResultData.ok();
   }
 
   async remove(noticeIds: number[]) {
-    const data = await this.sysNoticeEntityRep.update(
-      { noticeId: In(noticeIds) },
-      {
+    const data = await this.prisma.sysNotice.updateMany({
+      where: { noticeId: { in: noticeIds } },
+      data: {
         delFlag: '1',
       },
-    );
+    });
     return ResultData.ok(data);
   }
 }
