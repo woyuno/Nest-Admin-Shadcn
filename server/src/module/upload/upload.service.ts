@@ -1,9 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { ResultData } from 'src/common/utils/result';
-import { SysUploadEntity } from './entities/upload.entity';
 import { ChunkFileDto, ChunkMergeFileDto } from './dto/index';
 import { GenerateUUID } from 'src/common/utils/index';
 import fs from 'fs';
@@ -11,6 +8,7 @@ import path from 'path';
 import iconv from 'iconv-lite';
 import COS from 'cos-nodejs-sdk-v5';
 import Mime from 'mime-types';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class UploadService {
@@ -26,8 +24,7 @@ export class UploadService {
   });
   private isLocal: boolean;
   constructor(
-    @InjectRepository(SysUploadEntity)
-    private readonly sysUploadEntityRep: Repository<SysUploadEntity>,
+    private readonly prisma: PrismaService,
     @Inject(ConfigService)
     private config: ConfigService,
   ) {
@@ -53,7 +50,9 @@ export class UploadService {
       res = await this.saveFileCos(targetDir, file);
     }
     const uploadId = GenerateUUID();
-    await this.sysUploadEntityRep.save({ uploadId, ...res, ext: path.extname(res.newFileName), size: file.size });
+    await this.prisma.sysUpload.create({
+      data: { uploadId, ...res, ext: path.extname(res.newFileName), size: file.size },
+    });
     return res;
   }
 
@@ -152,10 +151,14 @@ export class UploadService {
       this.uploadLargeFileCos(targetFile, key);
       data.url = path.posix.join(this.config.get('cos.domain'), key);
       // 写入上传记录
-      await this.sysUploadEntityRep.save({ uploadId, ...data, ext: path.extname(data.newFileName), size: stats.size, status: '0' });
+      await this.prisma.sysUpload.create({
+        data: { uploadId, ...data, ext: path.extname(data.newFileName), size: stats.size, status: '0' },
+      });
       return ResultData.ok(data);
     }
-    await this.sysUploadEntityRep.save({ uploadId, ...data, ext: path.extname(data.newFileName), size: stats.size });
+    await this.prisma.sysUpload.create({
+      data: { uploadId, ...data, ext: path.extname(data.newFileName), size: stats.size },
+    });
     return ResultData.ok(data);
   }
 
@@ -306,9 +309,9 @@ export class UploadService {
    * @returns
    */
   async getChunkUploadResult(uploadId: string) {
-    const data = await this.sysUploadEntityRep.findOne({
+    const data = await this.prisma.sysUpload.findUnique({
       where: { uploadId },
-      select: ['status', 'fileName', 'newFileName', 'url'],
+      select: { status: true, fileName: true, newFileName: true, url: true },
     });
 
     if (data) {
@@ -337,10 +340,13 @@ export class UploadService {
         Key: targetFile,
         FilePath: sourceFile,
         SliceSize: 1024 * 1024 * 5 /* 触发分块上传的阈值，超过5MB使用分块上传，非必须 */,
-        onProgress: function (progressData) {
+        onProgress: async (progressData) => {
           /* 非必须 */
           if (progressData.percent === 1) {
-            this.sysUploadEntityRep.update({ filName: targetFile }, { status: 0 });
+            await this.prisma.sysUpload.updateMany({
+              where: { fileName: targetFile },
+              data: { status: '0' },
+            });
           }
         },
       });

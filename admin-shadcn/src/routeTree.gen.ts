@@ -37,7 +37,6 @@ import { Route as AuthenticatedNoticesIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedMenusIndexRouteImport } from './routes/_authenticated/menus/index'
 import { Route as AuthenticatedLogininforIndexRouteImport } from './routes/_authenticated/logininfor/index'
 import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
-import { Route as AuthenticatedGenIndexRouteImport } from './routes/_authenticated/gen/index'
 import { Route as AuthenticatedDictsIndexRouteImport } from './routes/_authenticated/dicts/index'
 import { Route as AuthenticatedDeptsIndexRouteImport } from './routes/_authenticated/depts/index'
 import { Route as AuthenticatedConfigsIndexRouteImport } from './routes/_authenticated/configs/index'
@@ -54,7 +53,6 @@ import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
-import { Route as AuthenticatedToolGenIndexRouteImport } from './routes/_authenticated/tool/gen/index'
 import { Route as AuthenticatedSystemUserIndexRouteImport } from './routes/_authenticated/system/user/index'
 import { Route as AuthenticatedSystemRoleIndexRouteImport } from './routes/_authenticated/system/role/index'
 import { Route as AuthenticatedSystemPostIndexRouteImport } from './routes/_authenticated/system/post/index'
@@ -70,7 +68,6 @@ import { Route as AuthenticatedMonitorLogininforIndexRouteImport } from './route
 import { Route as AuthenticatedMonitorJobIndexRouteImport } from './routes/_authenticated/monitor/job/index'
 import { Route as AuthenticatedMonitorCacheListIndexRouteImport } from './routes/_authenticated/monitor/cacheList/index'
 import { Route as AuthenticatedMonitorCacheIndexRouteImport } from './routes/_authenticated/monitor/cache/index'
-import { Route as AuthenticatedToolGenEditIndexTableIdRouteImport } from './routes/_authenticated/tool/gen-edit/index/$tableId'
 import { Route as AuthenticatedSystemUserAuthRoleUserIdRouteImport } from './routes/_authenticated/system/user-auth/role/$userId'
 import { Route as AuthenticatedSystemRoleAuthUserRoleIdRouteImport } from './routes/_authenticated/system/role-auth/user/$roleId'
 import { Route as AuthenticatedMonitorJobLogIndexJobIdRouteImport } from './routes/_authenticated/monitor/job-log/index/$jobId'
@@ -220,11 +217,6 @@ const AuthenticatedHelpCenterIndexRoute =
     path: '/help-center/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedGenIndexRoute = AuthenticatedGenIndexRouteImport.update({
-  id: '/gen/',
-  path: '/gen/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedDictsIndexRoute = AuthenticatedDictsIndexRouteImport.update({
   id: '/dicts/',
   path: '/dicts/',
@@ -312,12 +304,6 @@ const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
     path: '/errors/$error',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedToolGenIndexRoute =
-  AuthenticatedToolGenIndexRouteImport.update({
-    id: '/tool/gen/',
-    path: '/tool/gen/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedSystemUserIndexRoute =
@@ -410,12 +396,6 @@ const AuthenticatedMonitorCacheIndexRoute =
     path: '/monitor/cache/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedToolGenEditIndexTableIdRoute =
-  AuthenticatedToolGenEditIndexTableIdRouteImport.update({
-    id: '/tool/gen-edit/index/$tableId',
-    path: '/tool/gen-edit/index/$tableId',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedSystemUserAuthRoleUserIdRoute =
   AuthenticatedSystemUserAuthRoleUserIdRouteImport.update({
     id: '/system/user-auth/role/$userId',
@@ -465,7 +445,6 @@ export interface FileRoutesByFullPath {
   '/configs/': typeof AuthenticatedConfigsIndexRoute
   '/depts/': typeof AuthenticatedDeptsIndexRoute
   '/dicts/': typeof AuthenticatedDictsIndexRoute
-  '/gen/': typeof AuthenticatedGenIndexRoute
   '/help-center/': typeof AuthenticatedHelpCenterIndexRoute
   '/logininfor/': typeof AuthenticatedLogininforIndexRoute
   '/menus/': typeof AuthenticatedMenusIndexRoute
@@ -493,11 +472,9 @@ export interface FileRoutesByFullPath {
   '/system/post/': typeof AuthenticatedSystemPostIndexRoute
   '/system/role/': typeof AuthenticatedSystemRoleIndexRoute
   '/system/user/': typeof AuthenticatedSystemUserIndexRoute
-  '/tool/gen/': typeof AuthenticatedToolGenIndexRoute
   '/monitor/job-log/index/$jobId': typeof AuthenticatedMonitorJobLogIndexJobIdRoute
   '/system/role-auth/user/$roleId': typeof AuthenticatedSystemRoleAuthUserRoleIdRoute
   '/system/user-auth/role/$userId': typeof AuthenticatedSystemUserAuthRoleUserIdRoute
-  '/tool/gen-edit/index/$tableId': typeof AuthenticatedToolGenEditIndexTableIdRoute
 }
 export interface FileRoutesByTo {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
@@ -528,7 +505,6 @@ export interface FileRoutesByTo {
   '/configs': typeof AuthenticatedConfigsIndexRoute
   '/depts': typeof AuthenticatedDeptsIndexRoute
   '/dicts': typeof AuthenticatedDictsIndexRoute
-  '/gen': typeof AuthenticatedGenIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/logininfor': typeof AuthenticatedLogininforIndexRoute
   '/menus': typeof AuthenticatedMenusIndexRoute
@@ -556,11 +532,9 @@ export interface FileRoutesByTo {
   '/system/post': typeof AuthenticatedSystemPostIndexRoute
   '/system/role': typeof AuthenticatedSystemRoleIndexRoute
   '/system/user': typeof AuthenticatedSystemUserIndexRoute
-  '/tool/gen': typeof AuthenticatedToolGenIndexRoute
   '/monitor/job-log/index/$jobId': typeof AuthenticatedMonitorJobLogIndexJobIdRoute
   '/system/role-auth/user/$roleId': typeof AuthenticatedSystemRoleAuthUserRoleIdRoute
   '/system/user-auth/role/$userId': typeof AuthenticatedSystemUserAuthRoleUserIdRoute
-  '/tool/gen-edit/index/$tableId': typeof AuthenticatedToolGenEditIndexTableIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -596,7 +570,6 @@ export interface FileRoutesById {
   '/_authenticated/configs/': typeof AuthenticatedConfigsIndexRoute
   '/_authenticated/depts/': typeof AuthenticatedDeptsIndexRoute
   '/_authenticated/dicts/': typeof AuthenticatedDictsIndexRoute
-  '/_authenticated/gen/': typeof AuthenticatedGenIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
   '/_authenticated/logininfor/': typeof AuthenticatedLogininforIndexRoute
   '/_authenticated/menus/': typeof AuthenticatedMenusIndexRoute
@@ -624,11 +597,9 @@ export interface FileRoutesById {
   '/_authenticated/system/post/': typeof AuthenticatedSystemPostIndexRoute
   '/_authenticated/system/role/': typeof AuthenticatedSystemRoleIndexRoute
   '/_authenticated/system/user/': typeof AuthenticatedSystemUserIndexRoute
-  '/_authenticated/tool/gen/': typeof AuthenticatedToolGenIndexRoute
   '/_authenticated/monitor/job-log/index/$jobId': typeof AuthenticatedMonitorJobLogIndexJobIdRoute
   '/_authenticated/system/role-auth/user/$roleId': typeof AuthenticatedSystemRoleAuthUserRoleIdRoute
   '/_authenticated/system/user-auth/role/$userId': typeof AuthenticatedSystemUserAuthRoleUserIdRoute
-  '/_authenticated/tool/gen-edit/index/$tableId': typeof AuthenticatedToolGenEditIndexTableIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -662,7 +633,6 @@ export interface FileRouteTypes {
     | '/configs/'
     | '/depts/'
     | '/dicts/'
-    | '/gen/'
     | '/help-center/'
     | '/logininfor/'
     | '/menus/'
@@ -690,11 +660,9 @@ export interface FileRouteTypes {
     | '/system/post/'
     | '/system/role/'
     | '/system/user/'
-    | '/tool/gen/'
     | '/monitor/job-log/index/$jobId'
     | '/system/role-auth/user/$roleId'
     | '/system/user-auth/role/$userId'
-    | '/tool/gen-edit/index/$tableId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/clerk'
@@ -725,7 +693,6 @@ export interface FileRouteTypes {
     | '/configs'
     | '/depts'
     | '/dicts'
-    | '/gen'
     | '/help-center'
     | '/logininfor'
     | '/menus'
@@ -753,11 +720,9 @@ export interface FileRouteTypes {
     | '/system/post'
     | '/system/role'
     | '/system/user'
-    | '/tool/gen'
     | '/monitor/job-log/index/$jobId'
     | '/system/role-auth/user/$roleId'
     | '/system/user-auth/role/$userId'
-    | '/tool/gen-edit/index/$tableId'
   id:
     | '__root__'
     | '/_authenticated'
@@ -792,7 +757,6 @@ export interface FileRouteTypes {
     | '/_authenticated/configs/'
     | '/_authenticated/depts/'
     | '/_authenticated/dicts/'
-    | '/_authenticated/gen/'
     | '/_authenticated/help-center/'
     | '/_authenticated/logininfor/'
     | '/_authenticated/menus/'
@@ -820,11 +784,9 @@ export interface FileRouteTypes {
     | '/_authenticated/system/post/'
     | '/_authenticated/system/role/'
     | '/_authenticated/system/user/'
-    | '/_authenticated/tool/gen/'
     | '/_authenticated/monitor/job-log/index/$jobId'
     | '/_authenticated/system/role-auth/user/$roleId'
     | '/_authenticated/system/user-auth/role/$userId'
-    | '/_authenticated/tool/gen-edit/index/$tableId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1040,13 +1002,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHelpCenterIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/gen/': {
-      id: '/_authenticated/gen/'
-      path: '/gen'
-      fullPath: '/gen/'
-      preLoaderRoute: typeof AuthenticatedGenIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/dicts/': {
       id: '/_authenticated/dicts/'
       path: '/dicts'
@@ -1159,13 +1114,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/tool/gen/': {
-      id: '/_authenticated/tool/gen/'
-      path: '/tool/gen'
-      fullPath: '/tool/gen/'
-      preLoaderRoute: typeof AuthenticatedToolGenIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/system/user/': {
       id: '/_authenticated/system/user/'
       path: '/system/user'
@@ -1271,13 +1219,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMonitorCacheIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/tool/gen-edit/index/$tableId': {
-      id: '/_authenticated/tool/gen-edit/index/$tableId'
-      path: '/tool/gen-edit/index/$tableId'
-      fullPath: '/tool/gen-edit/index/$tableId'
-      preLoaderRoute: typeof AuthenticatedToolGenEditIndexTableIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/system/user-auth/role/$userId': {
       id: '/_authenticated/system/user-auth/role/$userId'
       path: '/system/user-auth/role/$userId'
@@ -1337,7 +1278,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedConfigsIndexRoute: typeof AuthenticatedConfigsIndexRoute
   AuthenticatedDeptsIndexRoute: typeof AuthenticatedDeptsIndexRoute
   AuthenticatedDictsIndexRoute: typeof AuthenticatedDictsIndexRoute
-  AuthenticatedGenIndexRoute: typeof AuthenticatedGenIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedLogininforIndexRoute: typeof AuthenticatedLogininforIndexRoute
   AuthenticatedMenusIndexRoute: typeof AuthenticatedMenusIndexRoute
@@ -1364,11 +1304,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSystemPostIndexRoute: typeof AuthenticatedSystemPostIndexRoute
   AuthenticatedSystemRoleIndexRoute: typeof AuthenticatedSystemRoleIndexRoute
   AuthenticatedSystemUserIndexRoute: typeof AuthenticatedSystemUserIndexRoute
-  AuthenticatedToolGenIndexRoute: typeof AuthenticatedToolGenIndexRoute
   AuthenticatedMonitorJobLogIndexJobIdRoute: typeof AuthenticatedMonitorJobLogIndexJobIdRoute
   AuthenticatedSystemRoleAuthUserRoleIdRoute: typeof AuthenticatedSystemRoleAuthUserRoleIdRoute
   AuthenticatedSystemUserAuthRoleUserIdRoute: typeof AuthenticatedSystemUserAuthRoleUserIdRoute
-  AuthenticatedToolGenEditIndexTableIdRoute: typeof AuthenticatedToolGenEditIndexTableIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -1383,7 +1321,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedConfigsIndexRoute: AuthenticatedConfigsIndexRoute,
   AuthenticatedDeptsIndexRoute: AuthenticatedDeptsIndexRoute,
   AuthenticatedDictsIndexRoute: AuthenticatedDictsIndexRoute,
-  AuthenticatedGenIndexRoute: AuthenticatedGenIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedLogininforIndexRoute: AuthenticatedLogininforIndexRoute,
   AuthenticatedMenusIndexRoute: AuthenticatedMenusIndexRoute,
@@ -1412,15 +1349,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSystemPostIndexRoute: AuthenticatedSystemPostIndexRoute,
   AuthenticatedSystemRoleIndexRoute: AuthenticatedSystemRoleIndexRoute,
   AuthenticatedSystemUserIndexRoute: AuthenticatedSystemUserIndexRoute,
-  AuthenticatedToolGenIndexRoute: AuthenticatedToolGenIndexRoute,
   AuthenticatedMonitorJobLogIndexJobIdRoute:
     AuthenticatedMonitorJobLogIndexJobIdRoute,
   AuthenticatedSystemRoleAuthUserRoleIdRoute:
     AuthenticatedSystemRoleAuthUserRoleIdRoute,
   AuthenticatedSystemUserAuthRoleUserIdRoute:
     AuthenticatedSystemUserAuthRoleUserIdRoute,
-  AuthenticatedToolGenEditIndexTableIdRoute:
-    AuthenticatedToolGenEditIndexTableIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

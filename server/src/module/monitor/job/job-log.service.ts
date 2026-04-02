@@ -1,48 +1,40 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
-import { JobLog } from './entities/job-log.entity';
 import { ListJobLogDto } from './dto/create-job.dto';
 import { ResultData } from 'src/common/utils/result';
 import { ExportTable } from 'src/common/utils/export';
 import { Response } from 'express';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class JobLogService {
-  constructor(
-    @InjectRepository(JobLog)
-    private jobLogRepository: Repository<JobLog>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * 查询任务日志列表
    */
   async list(query: ListJobLogDto) {
-    const entity = this.jobLogRepository.createQueryBuilder('entity');
+    const where = this.buildWhere(query);
+    const findManyArgs: {
+      where: Record<string, unknown>;
+      skip?: number;
+      take?: number;
+      orderBy: Array<Record<string, 'asc' | 'desc'>>;
+    } = {
+      where,
+      orderBy: [{ createTime: 'desc' }],
+    };
 
     if (query.pageSize && query.pageNum) {
-      entity.skip(query.pageSize * (query.pageNum - 1)).take(query.pageSize);
+      const pageSize = Number(query.pageSize);
+      const pageNum = Number(query.pageNum);
+      findManyArgs.skip = pageSize * (pageNum - 1);
+      findManyArgs.take = pageSize;
     }
 
-    if (query.jobName) {
-      entity.andWhere('entity.jobName LIKE :jobName', { jobName: `%${query.jobName}%` });
-    }
-
-    if (query.jobGroup) {
-      entity.andWhere('entity.jobGroup = :jobGroup', { jobGroup: query.jobGroup });
-    }
-
-    if (query.status) {
-      entity.andWhere('entity.status = :status', { status: query.status });
-    }
-
-    if (query.params?.beginTime && query.params?.endTime) {
-      entity.andWhere('entity.createTime BETWEEN :start AND :end', { start: query.params.beginTime, end: query.params.endTime });
-    }
-
-    entity.orderBy('entity.createTime', 'DESC');
-
-    const [list, total] = await entity.getManyAndCount();
+    const [list, total] = await Promise.all([
+      this.prisma.sysJobLog.findMany(findManyArgs),
+      this.prisma.sysJobLog.count({ where }),
+    ]);
 
     return ResultData.ok({
       list,
@@ -53,9 +45,10 @@ export class JobLogService {
   /**
    * 添加任务日志
    */
-  async addJobLog(jobLog: Partial<JobLog>) {
-    const log = this.jobLogRepository.create(jobLog);
-    await this.jobLogRepository.save(log);
+  async addJobLog(jobLog: Record<string, unknown>) {
+    await this.prisma.sysJobLog.create({
+      data: jobLog as never,
+    });
     return ResultData.ok();
   }
 
@@ -63,7 +56,7 @@ export class JobLogService {
    * 清空日志
    */
   async clean() {
-    await this.jobLogRepository.clear();
+    await this.prisma.sysJobLog.deleteMany();
     return ResultData.ok();
   }
 
@@ -98,5 +91,32 @@ export class JobLogService {
       },
     };
     ExportTable(options, res);
+  }
+
+  private buildWhere(query: ListJobLogDto) {
+    const where: Record<string, unknown> = {};
+
+    if (query.jobName) {
+      where.jobName = {
+        contains: query.jobName,
+      };
+    }
+
+    if (query.jobGroup) {
+      where.jobGroup = query.jobGroup;
+    }
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    if (query.params?.beginTime && query.params?.endTime) {
+      where.createTime = {
+        gte: new Date(query.params.beginTime),
+        lte: new Date(query.params.endTime),
+      };
+    }
+
+    return where;
   }
 }

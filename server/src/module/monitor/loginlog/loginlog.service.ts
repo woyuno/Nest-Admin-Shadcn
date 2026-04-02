@@ -1,18 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Response } from 'express';
-import { Repository, In, Not, IsNull } from 'typeorm';
 import { ResultData } from 'src/common/utils/result';
 import { ExportTable } from 'src/common/utils/export';
-import { MonitorLoginlogEntity } from './entities/loginlog.entity';
 import { CreateLoginlogDto, ListLoginlogDto } from './dto/index';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class LoginlogService {
-  constructor(
-    @InjectRepository(MonitorLoginlogEntity)
-    private readonly monitorLoginlogEntityRep: Repository<MonitorLoginlogEntity>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * 创建用户登录日志
@@ -20,7 +15,9 @@ export class LoginlogService {
    * @returns
    */
   async create(createLoginlogDto: CreateLoginlogDto) {
-    return await this.monitorLoginlogEntityRep.save(createLoginlogDto);
+    return await this.prisma.sysLogininfor.create({
+      data: createLoginlogDto,
+    });
   }
 
   /**
@@ -29,35 +26,45 @@ export class LoginlogService {
    * @returns
    */
   async findAll(query: ListLoginlogDto) {
-    const entity = this.monitorLoginlogEntityRep.createQueryBuilder('entity');
-    entity.where('entity.delFlag = :delFlag', { delFlag: '0' });
+    const where: Record<string, unknown> = {
+      delFlag: '0',
+    };
 
     if (query.ipaddr) {
-      entity.andWhere(`entity.ipaddr LIKE "%${query.ipaddr}%"`);
+      where.ipaddr = { contains: query.ipaddr };
     }
 
     if (query.userName) {
-      entity.andWhere(`entity.userName LIKE "%${query.userName}%"`);
+      where.userName = { contains: query.userName };
     }
 
     if (query.status) {
-      entity.andWhere('entity.status = :status', { status: query.status });
+      where.status = query.status;
     }
 
     if (query.params?.beginTime && query.params?.endTime) {
-      entity.andWhere('entity.loginTime BETWEEN :start AND :end', { start: query.params.beginTime, end: query.params.endTime });
+      where.loginTime = {
+        gte: new Date(query.params.beginTime),
+        lte: new Date(query.params.endTime),
+      };
     }
 
-    if (query.orderByColumn && query.isAsc) {
-      const key = query.isAsc === 'ascending' ? 'ASC' : 'DESC';
-      entity.orderBy(`entity.${query.orderByColumn}`, key);
-    }
-
-    if (query.pageSize && query.pageNum) {
-      entity.skip(query.pageSize * (query.pageNum - 1)).take(query.pageSize);
-    }
-
-    const [list, total] = await entity.getManyAndCount();
+    const orderBy = query.orderByColumn && query.isAsc ? { [query.orderByColumn]: query.isAsc === 'ascending' ? 'asc' : 'desc' } : undefined;
+    const pageSize = Number(query.pageSize);
+    const pageNum = Number(query.pageNum);
+    const [list, total] = await Promise.all([
+      this.prisma.sysLogininfor.findMany({
+        where,
+        ...(orderBy ? { orderBy } : {}),
+        ...(query.pageSize && query.pageNum
+          ? {
+              skip: pageSize * (pageNum - 1),
+              take: pageSize,
+            }
+          : {}),
+      }),
+      this.prisma.sysLogininfor.count({ where }),
+    ]);
 
     return ResultData.ok({
       list,
@@ -70,12 +77,12 @@ export class LoginlogService {
    * @returns
    */
   async remove(ids: string[]) {
-    const data = await this.monitorLoginlogEntityRep.update(
-      { infoId: In(ids) },
-      {
+    const data = await this.prisma.sysLogininfor.updateMany({
+      where: { infoId: { in: ids.map((id) => Number(id)) } },
+      data: {
         delFlag: '1',
       },
-    );
+    });
     return ResultData.ok(data);
   }
 
@@ -84,12 +91,11 @@ export class LoginlogService {
    * @returns
    */
   async removeAll() {
-    await this.monitorLoginlogEntityRep.update(
-      { infoId: Not(IsNull()) },
-      {
+    await this.prisma.sysLogininfor.updateMany({
+      data: {
         delFlag: '1',
       },
-    );
+    });
     return ResultData.ok();
   }
 

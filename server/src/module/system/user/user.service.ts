@@ -1,157 +1,89 @@
-import { Repository, In, Not } from 'typeorm';
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
-import { RedisService } from 'src/module/common/redis/redis.service';
+import { SysDept, SysMenu, SysPost, SysRole, SysUser } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { Response } from 'express';
-import { GetNowDate, GenerateUUID, Uniq } from 'src/common/utils/index';
+import { GenerateUUID, Uniq } from 'src/common/utils/index';
 import { ExportTable } from 'src/common/utils/export';
-
 import { CacheEnum, DelFlagEnum, StatusEnum, DataScopeEnum } from 'src/common/enum/index';
 import { LOGIN_TOKEN_EXPIRESIN, SYS_USER_TYPE } from 'src/common/constant/index';
 import { ResultData } from 'src/common/utils/result';
 import { CreateUserDto, UpdateUserDto, ListUserDto, ChangeStatusDto, ResetPwdDto, AllocatedListDto, UpdateProfileDto, UpdatePwdDto } from './dto/index';
 import { RegisterDto, LoginDto } from '../../main/dto/index';
 import { AuthUserCancelDto, AuthUserCancelAllDto, AuthUserSelectAllDto } from '../role/dto/index';
-
-import { UserEntity } from './entities/sys-user.entity';
-import { SysUserWithPostEntity } from './entities/user-width-post.entity';
-import { SysUserWithRoleEntity } from './entities/user-width-role.entity';
-import { SysPostEntity } from '../post/entities/post.entity';
-import { SysDeptEntity } from '../dept/entities/dept.entity';
 import { RoleService } from '../role/role.service';
 import { DeptService } from '../dept/dept.service';
-
 import { ConfigService } from '../config/config.service';
-import { SysRoleEntity } from '../role/entities/role.entity';
-import { SysMenuEntity } from '../menu/entities/menu.entity';
 import { UserType } from './dto/user';
 import { ClientInfoDto } from 'src/common/decorators/common.decorator';
+import { RedisService } from 'src/module/common/redis/redis.service';
 import { Cacheable, CacheEvict } from 'src/common/decorators/redis.decorator';
 import { Captcha } from 'src/common/decorators/captcha.decorator';
 import { buildAssignedUserRoles, mergeUsersWithRoles } from './user-list-role.helper';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(UserEntity)
-    private readonly userRepo: Repository<UserEntity>,
-    @InjectRepository(SysDeptEntity)
-    private readonly sysDeptEntityRep: Repository<SysDeptEntity>,
-    @InjectRepository(SysPostEntity)
-    private readonly sysPostEntityRep: Repository<SysPostEntity>,
-    @InjectRepository(SysUserWithPostEntity)
-    private readonly sysUserWithPostEntityRep: Repository<SysUserWithPostEntity>,
-    @InjectRepository(SysUserWithRoleEntity)
-    private readonly sysUserWithRoleEntityRep: Repository<SysUserWithRoleEntity>,
+    private readonly prisma: PrismaService,
     private readonly roleService: RoleService,
     private readonly deptService: DeptService,
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
     private readonly configService: ConfigService,
   ) {}
-  /**
-   * 后台创建用户
-   * @param createUserDto
-   * @returns
-   */
+
   async create(createUserDto: CreateUserDto) {
     const salt = bcrypt.genSaltSync(10);
-    if (createUserDto.password) {
-      createUserDto.password = await bcrypt.hashSync(createUserDto.password, salt);
-    }
+    const password = createUserDto.password ? bcrypt.hashSync(createUserDto.password, salt) : createUserDto.password;
+    const { postIds = [], roleIds = [], ...userData } = createUserDto;
 
-    const res = await this.userRepo.save({ ...createUserDto, userType: SYS_USER_TYPE.CUSTOM });
-    const postEntity = this.sysUserWithPostEntityRep.createQueryBuilder('postEntity');
-    const postValues = createUserDto.postIds.map((id) => {
-      return {
-        userId: res.userId,
-        postId: id,
-      };
-    });
-    postEntity.insert().values(postValues).execute();
+    await this.prisma.$transaction(async (tx) => {
+      const res = await tx.sysUser.create({
+        data: {
+          ...userData,
+          password,
+          userType: SYS_USER_TYPE.CUSTOM,
+        },
+      });
 
-    const roleEntity = this.sysUserWithRoleEntityRep.createQueryBuilder('roleEntity');
-    const roleValues = createUserDto.roleIds.map((id) => {
-      return {
-        userId: res.userId,
-        roleId: id,
-      };
+      if (postIds.length > 0) {
+        await tx.sysUserPost.createMany({
+          data: postIds.map((postId) => ({
+            userId: res.userId,
+            postId,
+          })),
+        });
+      }
+
+      if (roleIds.length > 0) {
+        await tx.sysUserRole.createMany({
+          data: roleIds.map((roleId) => ({
+            userId: res.userId,
+            roleId,
+          })),
+        });
+      }
     });
-    roleEntity.insert().values(roleValues).execute();
 
     return ResultData.ok();
   }
 
-  /**
-   * 用户列表
-   * @param query
-   * @returns
-   */
   async findAll(query: ListUserDto, user: UserType['user']) {
-    const entity = this.userRepo.createQueryBuilder('user');
-    entity.where('user.delFlag = :delFlag', { delFlag: '0' });
+    const where = await this.buildUserListWhere(query, user);
+    const pagination = this.getPagination(query);
 
-    //数据权限过滤
-    if (user) {
-      const roles = user.roles;
-      const deptIds = [];
-      let dataScopeAll = false;
-      let dataScopeSelf = false;
-      for (let index = 0; index < roles.length; index++) {
-        const role = roles[index];
-        if (role.dataScope === DataScopeEnum.DATA_SCOPE_ALL) {
-          dataScopeAll = true;
-          break;
-        } else if (role.dataScope === DataScopeEnum.DATA_SCOPE_CUSTOM) {
-          const roleWithDeptIds = await this.roleService.findRoleWithDeptIds(role.roleId);
-          deptIds.push(...roleWithDeptIds);
-        } else if (role.dataScope === DataScopeEnum.DATA_SCOPE_DEPT || role.dataScope === DataScopeEnum.DATA_SCOPE_DEPT_AND_CHILD) {
-          const dataScopeWidthDeptIds = await this.deptService.findDeptIdsByDataScope(user.deptId, role.dataScope);
-          deptIds.push(...dataScopeWidthDeptIds);
-        } else if (role.dataScope === DataScopeEnum.DATA_SCOPE_SELF) {
-          dataScopeSelf = true;
-        }
-      }
-
-      if (!dataScopeAll) {
-        if (deptIds.length > 0) {
-          entity.where('user.deptId IN (:...deptIds)', { deptIds: deptIds });
-        } else if (dataScopeSelf) {
-          entity.where('user.userId = :userId', { userId: user.userId });
-        }
-      }
-    }
-
-    if (query.deptId) {
-      const deptIds = await this.deptService.findDeptIdsByDataScope(+query.deptId, DataScopeEnum.DATA_SCOPE_DEPT_AND_CHILD);
-      entity.andWhere('user.deptId IN (:...deptIds)', { deptIds: deptIds });
-    }
-
-    if (query.userName) {
-      entity.andWhere(`user.userName LIKE "%${query.userName}%"`);
-    }
-
-    if (query.phonenumber) {
-      entity.andWhere(`user.phonenumber LIKE "%${query.phonenumber}%"`);
-    }
-
-    if (query.status) {
-      entity.andWhere('user.status = :status', { status: query.status });
-    }
-
-    if (query.params?.beginTime && query.params?.endTime) {
-      entity.andWhere('user.createTime BETWEEN :start AND :end', { start: query.params.beginTime, end: query.params.endTime });
-    }
-
-    if (query.pageSize && query.pageNum) {
-      entity.skip(query.pageSize * (query.pageNum - 1)).take(query.pageSize);
-    }
-    //联查部门详情
-    entity.leftJoinAndMapOne('user.dept', SysDeptEntity, 'dept', 'dept.deptId = user.deptId');
-
-    const [list, total] = await entity.getManyAndCount();
+    const [list, total] = await Promise.all([
+      this.prisma.sysUser.findMany({
+        where,
+        include: {
+          dept: true,
+        },
+        ...(pagination ?? {}),
+        orderBy: [{ deptId: 'asc' }, { userId: 'asc' }],
+      }),
+      this.prisma.sysUser.count({ where }),
+    ]);
     const enrichedList = await this.attachRolesForUsers(list);
 
     return ResultData.ok({
@@ -160,17 +92,22 @@ export class UserService {
     });
   }
 
-  private async attachRolesForUsers<T extends { userId: number }>(users: T[]): Promise<Array<T & { roles: SysRoleEntity[] }>> {
+  private async attachRolesForUsers<T extends { userId: number }>(users: T[]): Promise<Array<T & { roles: SysRole[] }>> {
     if (users.length === 0) {
       return [];
     }
 
     const userIds = users.map((item) => item.userId);
-    const userRoleMappings = await this.sysUserWithRoleEntityRep.find({
+    const userRoleMappings = await this.prisma.sysUserRole.findMany({
       where: {
-        userId: In(userIds),
+        userId: {
+          in: userIds,
+        },
       },
-      select: ['userId', 'roleId'],
+      select: {
+        userId: true,
+        roleId: true,
+      },
     });
 
     if (userRoleMappings.length === 0) {
@@ -182,29 +119,26 @@ export class UserService {
 
     const roleIds = Uniq(userRoleMappings.map((item) => item.roleId));
     const roles = await this.roleService.findRoles({
-      where: {
-        delFlag: '0',
-        roleId: In(roleIds),
+      delFlag: '0',
+      roleId: {
+        in: roleIds,
       },
     });
-    return mergeUsersWithRoles(users, userRoleMappings, roles);
+    return mergeUsersWithRoles(users, userRoleMappings as never, roles as never);
   }
 
-  /**
-   * 用户角色+岗位信息
-   * @returns
-   */
   async findPostAndRoleAll() {
-    const posts = await this.sysPostEntityRep.find({
-      where: {
+    const [posts, roles] = await Promise.all([
+      this.prisma.sysPost.findMany({
+        where: {
+          delFlag: '0',
+        },
+        orderBy: [{ postSort: 'asc' }, { postId: 'asc' }],
+      }),
+      this.roleService.findRoles({
         delFlag: '0',
-      },
-    });
-    const roles = await this.roleService.findRoles({
-      where: {
-        delFlag: '0',
-      },
-    });
+      }),
+    ]);
 
     return ResultData.ok({
       posts,
@@ -214,124 +148,114 @@ export class UserService {
 
   @Cacheable(CacheEnum.SYS_USER_KEY, '{userId}')
   async findOne(userId: number) {
-    const data = await this.userRepo.findOne({
+    const data = await this.prisma.sysUser.findUnique({
       where: {
-        delFlag: '0',
-        userId: userId,
+        userId,
+      },
+      include: {
+        dept: true,
       },
     });
 
-    const dept = await this.sysDeptEntityRep.findOne({
-      where: {
-        delFlag: '0',
-        deptId: data.deptId,
-      },
-    });
-    data['dept'] = dept;
+    if (!data || data.delFlag !== '0') {
+      return ResultData.ok(null);
+    }
 
-    const postList = await this.sysUserWithPostEntityRep.find({
-      where: {
-        userId: userId,
-      },
-    });
-    const postIds = postList.map((item) => item.postId);
-    const allPosts = await this.sysPostEntityRep.find({
-      where: {
+    const [postList, allPosts, roleIds, allRoles] = await Promise.all([
+      this.prisma.sysUserPost.findMany({
+        where: {
+          userId,
+        },
+        select: {
+          postId: true,
+        },
+      }),
+      this.prisma.sysPost.findMany({
+        where: {
+          delFlag: '0',
+        },
+        orderBy: [{ postSort: 'asc' }, { postId: 'asc' }],
+      }),
+      this.getRoleIds([userId]),
+      this.roleService.findRoles({
         delFlag: '0',
-      },
-    });
+      }),
+    ]);
 
-    const roleIds = await this.getRoleIds([userId]);
-    const allRoles = await this.roleService.findRoles({
-      where: {
-        delFlag: '0',
-      },
-    });
-
-    data['roles'] = allRoles.filter((item) => roleIds.includes(item.roleId));
+    const result = {
+      ...data,
+      roles: allRoles.filter((item) => roleIds.includes(item.roleId)),
+    };
 
     return ResultData.ok({
-      data,
-      postIds,
+      data: result,
+      postIds: postList.map((item) => item.postId),
       posts: allPosts,
       roles: allRoles,
       roleIds,
     });
   }
 
-  /**
-   * 更新用户
-   * @param updateUserDto
-   * @returns
-   */
   @CacheEvict(CacheEnum.SYS_USER_KEY, '{updateUserDto.userId}')
   async update(updateUserDto: UpdateUserDto, userId: number) {
-    //不能修改超级管理员
-    if (updateUserDto.userId === 1) throw new BadRequestException('非法操作！');
+    if (updateUserDto.userId === 1) {
+      throw new BadRequestException('非法操作！');
+    }
 
-    //TODO：过滤掉设置超级管理员角色
-    updateUserDto.roleIds = updateUserDto.roleIds.filter((v) => v != 1);
+    const roleIds = (updateUserDto.roleIds ?? []).filter((value) => value !== 1);
+    const postIds = updateUserDto.postIds ?? [];
 
-    //当前用户不能修改自己的状态
     if (updateUserDto.userId === userId) {
       delete updateUserDto.status;
     }
 
-    if (updateUserDto?.postIds?.length > 0) {
-      //用户已有岗位,先删除所有关联岗位
-      const hasPostId = await this.sysUserWithPostEntityRep.findOne({
+    const { userId: targetUserId, password, dept, roles, ...rest } = updateUserDto as UpdateUserDto & {
+      dept?: unknown;
+      roles?: unknown;
+    };
+    delete rest.roleIds;
+    delete rest.postIds;
+
+    const data = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.sysUser.update({
         where: {
-          userId: updateUserDto.userId,
+          userId: targetUserId,
         },
-        select: ['postId'],
+        data: rest,
       });
 
-      if (hasPostId) {
-        await this.sysUserWithPostEntityRep.delete({
-          userId: updateUserDto.userId,
+      await tx.sysUserPost.deleteMany({
+        where: {
+          userId: targetUserId,
+        },
+      });
+
+      if (postIds.length > 0) {
+        await tx.sysUserPost.createMany({
+          data: postIds.map((postId) => ({
+            userId: targetUserId,
+            postId,
+          })),
         });
       }
-      const postEntity = this.sysUserWithPostEntityRep.createQueryBuilder('postEntity');
-      const postValues = updateUserDto.postIds.map((id) => {
-        return {
-          userId: updateUserDto.userId,
-          postId: id,
-        };
-      });
-      postEntity.insert().values(postValues).execute();
-    }
 
-    if (updateUserDto?.roleIds?.length > 0) {
-      //用户已有角色,先删除所有关联角色
-      const hasRoletId = await this.sysUserWithRoleEntityRep.findOne({
+      await tx.sysUserRole.deleteMany({
         where: {
-          userId: updateUserDto.userId,
+          userId: targetUserId,
         },
-        select: ['roleId'],
       });
-      if (hasRoletId) {
-        await this.sysUserWithRoleEntityRep.delete({
-          userId: updateUserDto.userId,
+
+      if (roleIds.length > 0) {
+        await tx.sysUserRole.createMany({
+          data: roleIds.map((roleId) => ({
+            userId: targetUserId,
+            roleId,
+          })),
         });
       }
-      const roleEntity = this.sysUserWithRoleEntityRep.createQueryBuilder('roleEntity');
-      const roleValues = updateUserDto.roleIds.map((id) => {
-        return {
-          userId: updateUserDto.userId,
-          roleId: id,
-        };
-      });
-      roleEntity.insert().values(roleValues).execute();
-    }
 
-    delete updateUserDto.password;
-    delete (updateUserDto as any).dept;
-    delete (updateUserDto as any).roles;
-    delete (updateUserDto as any).roleIds;
-    delete (updateUserDto as any).postIds;
-
-    //更新用户信息
-    const data = await this.userRepo.update({ userId: updateUserDto.userId }, updateUserDto);
+      return result;
+    });
 
     return ResultData.ok(data);
   }
@@ -341,60 +265,51 @@ export class UserService {
     return userId;
   }
 
-  /**
-   * 登陆
-   */
   @Captcha('user')
   async login(user: LoginDto, clientInfo: ClientInfoDto) {
-    const data = await this.userRepo.findOne({
+    const data = await this.prisma.sysUser.findFirst({
       where: {
         userName: user.userName,
       },
-      select: ['userId', 'password'],
+      select: {
+        userId: true,
+        password: true,
+      },
     });
+
+    if (!data || !bcrypt.compareSync(user.password, data.password)) {
+      return ResultData.fail(500, '帐号或密码错误');
+    }
+
     this.clearCacheByUserId(data.userId);
 
-    if (!(data && bcrypt.compareSync(user.password, data.password))) {
-      return ResultData.fail(500, `帐号或密码错误`);
-    }
-
     const userData = await this.getUserinfo(data.userId);
+    if (!userData) {
+      return ResultData.fail(500, '帐号或密码错误');
+    }
 
     if (userData.delFlag === DelFlagEnum.DELETE) {
-      return ResultData.fail(500, `您已被禁用，如需正常使用请联系管理员`);
+      return ResultData.fail(500, '您已被禁用，如需正常使用请联系管理员');
     }
     if (userData.status === StatusEnum.STOP) {
-      return ResultData.fail(500, `您已被停用，如需正常使用请联系管理员`);
+      return ResultData.fail(500, '您已被停用，如需正常使用请联系管理员');
     }
 
-    /**
-     * 更新用户登录信息
-     */
     const loginDate = new Date();
-    await this.userRepo.update(
-      {
+    await this.prisma.sysUser.update({
+      where: {
         userId: data.userId,
       },
-      {
-        loginDate: loginDate,
+      data: {
+        loginDate,
         loginIp: clientInfo.ipaddr,
       },
-    );
-
-    const uuid = GenerateUUID();
-    const token = this.createToken({ uuid: uuid, userId: userData.userId });
-    const permissions = await this.getUserPermissions(userData.userId);
-    const deptData = await this.sysDeptEntityRep.findOne({
-      where: {
-        deptId: userData.deptId,
-      },
-      select: ['deptName'],
     });
 
-    /**
-     * 设置公司名称
-     */
-    userData['deptName'] = deptData.deptName || '';
+    const uuid = GenerateUUID();
+    const token = this.createToken({ uuid, userId: userData.userId });
+    const permissions = await this.getUserPermissions(userData.userId);
+    userData['deptName'] = userData.dept?.deptName || '';
     const roles = userData.roles.map((item) => item.roleKey);
 
     const userInfo = {
@@ -403,8 +318,8 @@ export class UserService {
       loginLocation: clientInfo.loginLocation,
       loginTime: loginDate,
       os: clientInfo.os,
-      permissions: permissions,
-      roles: roles,
+      permissions,
+      roles,
       token: uuid,
       user: userData,
       userId: userData.userId,
@@ -423,29 +338,23 @@ export class UserService {
     );
   }
 
-  /**
-   * 更新redis中用户权限和角色信息
-   */
   async updateRedisUserRolesAndPermissions(uuid: string, userId: number) {
     const userData = await this.getUserinfo(userId);
+    if (!userData) {
+      return;
+    }
 
     const permissions = await this.getUserPermissions(userId);
     const roles = userData.roles.map((item) => item.roleKey);
 
     await this.updateRedisToken(uuid, {
-      permissions: permissions,
-      roles: roles,
+      permissions,
+      roles,
     });
   }
 
-  /**
-   * 更新redis中的元数据
-   * @param token
-   * @param metaData
-   */
   async updateRedisToken(token: string, metaData: Partial<UserType>) {
     const oldMetaData = await this.redisService.get(`${CacheEnum.LOGIN_TOKEN_KEY}${token}`);
-
     let newMetaData = metaData;
     if (oldMetaData) {
       newMetaData = Object.assign(oldMetaData, metaData);
@@ -454,295 +363,234 @@ export class UserService {
     await this.redisService.set(`${CacheEnum.LOGIN_TOKEN_KEY}${token}`, newMetaData, LOGIN_TOKEN_EXPIRESIN);
   }
 
-  /**
-   * 获取角色Id列表
-   * @param userId
-   * @returns
-   */
   async getRoleIds(userIds: Array<number>) {
-    const roleList = await this.sysUserWithRoleEntityRep.find({
+    if (!userIds || userIds.length === 0) {
+      return [];
+    }
+
+    const roleList = await this.prisma.sysUserRole.findMany({
       where: {
-        userId: In(userIds),
+        userId: {
+          in: userIds,
+        },
       },
-      select: ['roleId'],
+      select: {
+        roleId: true,
+      },
     });
-    const roleIds = roleList.map((item) => item.roleId);
-    return Uniq(roleIds);
+    return Uniq(roleList.map((item) => item.roleId));
   }
 
-  /**
-   * 获取权限列表
-   * @param userId
-   * @returns
-   */
   async getUserPermissions(userId: number) {
-    // 超级管理员 - 根据角色赋予 权限
-    // if (userId === 1) {
-    //   return ['*:*:*'];
-    // }
     const roleIds = await this.getRoleIds([userId]);
     const list = await this.roleService.getPermissionsByRoleIds(roleIds);
-    const permissions = Uniq(list.map((item: SysMenuEntity) => item.perms)).filter((item) => {
-      return item;
-    });
-    return permissions;
+    return Uniq(list.map((item: SysMenu) => item.perms)).filter((item) => item);
   }
 
-  /**
-   * 获取用户信息
-   */
-  async getUserinfo(userId: number): Promise<{ dept: SysDeptEntity; roles: Array<SysRoleEntity>; posts: Array<SysPostEntity> } & UserEntity> {
-    const entity = this.userRepo.createQueryBuilder('user');
-    entity.where({
-      userId: userId,
-      delFlag: DelFlagEnum.NORMAL,
-    });
-    //联查部门详情
-    entity.leftJoinAndMapOne('user.dept', SysDeptEntity, 'dept', 'dept.deptId = user.deptId');
-    const roleIds = await this.getRoleIds([userId]);
-
-    const roles = await this.roleService.findRoles({
+  async getUserinfo(userId: number): Promise<({ dept: SysDept | null; roles: Array<SysRole>; posts: Array<SysPost> } & SysUser) | null> {
+    const data = await this.prisma.sysUser.findUnique({
       where: {
-        delFlag: '0',
-        roleId: In(roleIds),
+        userId,
       },
-    });
-
-    const postIds = (
-      await this.sysUserWithPostEntityRep.find({
-        where: {
-          userId: userId,
+      include: {
+        dept: true,
+        roleBindings: {
+          include: {
+            role: true,
+          },
         },
-        select: ['postId'],
-      })
-    ).map((item) => item.postId);
-
-    const posts = await this.sysPostEntityRep.find({
-      where: {
-        delFlag: '0',
-        postId: In(postIds),
+        postBindings: {
+          include: {
+            post: true,
+          },
+        },
       },
     });
 
-    const data = await entity.getOne();
+    if (!data || data.delFlag !== DelFlagEnum.NORMAL) {
+      return null;
+    }
 
-    const result = {
-      ...data,
-      roles,
-      posts,
-      dept: (data as any).dept,
+    const { roleBindings, postBindings, ...user } = data;
+
+    return {
+      ...(user as SysUser),
+      dept: data.dept as SysDept | null,
+      roles: roleBindings.map((item) => item.role).filter((item) => item && item.delFlag === '0') as SysRole[],
+      posts: postBindings.map((item) => item.post).filter((item) => item && item.delFlag === '0') as SysPost[],
     };
-
-    return result;
   }
 
-  /**
-   * 注册
-   */
   async register(user: RegisterDto) {
-    const loginDate = GetNowDate();
-    const salt = bcrypt.genSaltSync(10);
-    if (user.password) {
-      user.password = await bcrypt.hashSync(user.password, salt);
-    }
-    const checkUserNameUnique = await this.userRepo.findOne({
+    const password = user.password ? bcrypt.hashSync(user.password, bcrypt.genSaltSync(10)) : user.password;
+
+    const checkUserNameUnique = await this.prisma.sysUser.findFirst({
       where: {
         userName: user.userName,
       },
-      select: ['userName'],
+      select: {
+        userName: true,
+      },
     });
     if (checkUserNameUnique) {
       return ResultData.fail(500, `保存用户'${user.userName}'失败，注册账号已存在`);
     }
-    user['userName'] = user.userName;
-    user['nickName'] = user.userName;
-    await this.userRepo.save({ ...user, loginDate, userType: SYS_USER_TYPE.CUSTOM });
+
+    await this.prisma.sysUser.create({
+      data: {
+        ...user,
+        password,
+        loginDate: new Date(),
+        nickName: user.userName,
+        userType: SYS_USER_TYPE.CUSTOM,
+      },
+    });
     return ResultData.ok();
   }
 
-  /**
-   * 从数据声明生成令牌
-   *
-   * @param payload 数据声明
-   * @return 令牌
-   */
   createToken(payload: { uuid: string; userId: number }): string {
-    const accessToken = this.jwtService.sign(payload);
-    return accessToken;
+    return this.jwtService.sign(payload);
   }
 
-  /**
-   * 从令牌中获取数据声明
-   *
-   * @param token 令牌
-   * @return 数据声明
-   */
   parseToken(token: string) {
     try {
       if (!token) return null;
-      const payload = this.jwtService.verify(token.replace('Bearer ', ''));
-      return payload;
+      return this.jwtService.verify(token.replace('Bearer ', ''));
     } catch (error) {
       return null;
     }
   }
 
-  /**
-   * 重置密码
-   * @param body
-   * @returns
-   */
   async resetPwd(body: ResetPwdDto) {
     if (body.userId === 1) {
       return ResultData.fail(500, '系统用户不能重置密码');
     }
-    if (body.password) {
-      body.password = await bcrypt.hashSync(body.password, bcrypt.genSaltSync(10));
-    }
-    await this.userRepo.update(
-      {
+
+    const password = body.password ? bcrypt.hashSync(body.password, bcrypt.genSaltSync(10)) : body.password;
+    await this.prisma.sysUser.update({
+      where: {
         userId: body.userId,
       },
-      {
-        password: body.password,
+      data: {
+        password,
       },
-    );
+    });
     return ResultData.ok();
   }
 
-  /**
-   * 批量删除用户
-   * @param ids
-   * @returns
-   */
   async remove(ids: number[]) {
-    // 忽略系统角色的删除
-    const data = await this.userRepo.update(
-      { userId: In(ids), userType: Not(SYS_USER_TYPE.SYS) },
-      {
+    const data = await this.prisma.sysUser.updateMany({
+      where: {
+        userId: {
+          in: ids,
+        },
+        userType: {
+          not: SYS_USER_TYPE.SYS,
+        },
+      },
+      data: {
         delFlag: '1',
       },
-    );
+    });
     return ResultData.ok(data);
   }
 
-  /**
-   * 角色详情
-   * @param id
-   * @returns
-   */
   async authRole(userId: number) {
     const allRoles = await this.roleService.findRoles({
+      delFlag: '0',
+    });
+
+    const user = await this.prisma.sysUser.findUnique({
       where: {
-        delFlag: '0',
+        userId,
+      },
+      include: {
+        dept: true,
       },
     });
 
-    const user = await this.userRepo.findOne({
-      where: {
-        delFlag: '0',
-        userId: userId,
-      },
-    });
-
-    const dept = await this.sysDeptEntityRep.findOne({
-      where: {
-        delFlag: '0',
-        deptId: user.deptId,
-      },
-    });
-    user['dept'] = dept;
+    if (!user || user.delFlag !== '0') {
+      return ResultData.ok({
+        roles: allRoles,
+        user: null,
+      });
+    }
 
     const roleIds = await this.getRoleIds([userId]);
-    user['roles'] = buildAssignedUserRoles(allRoles, roleIds);
+    const userData = {
+      ...user,
+      roles: buildAssignedUserRoles(allRoles as never, roleIds),
+    };
 
     return ResultData.ok({
       roles: allRoles,
-      user,
+      user: userData,
     });
   }
 
-  /**
-   * 更新用户角色信息
-   * @param query
-   * @returns
-   */
   async updateAuthRole(query) {
-    let roleIds = query.roleIds.split(',');
+    const roleIds = (query.roleIds ? `${query.roleIds}`.split(',') : [])
+      .map((id) => Number(id))
+      .filter((value) => value && value !== 1);
+    const userId = Number(query.userId);
 
-    //TODO：过滤掉设置超级管理员角色
-    roleIds = roleIds.filter((v) => v != 1);
-
-    if (roleIds?.length > 0) {
-      //用户已有角色,先删除所有关联角色
-      const hasRoletId = await this.sysUserWithRoleEntityRep.findOne({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.sysUserRole.deleteMany({
         where: {
-          userId: query.userId,
+          userId,
         },
-        select: ['roleId'],
       });
-      if (hasRoletId) {
-        await this.sysUserWithRoleEntityRep.delete({
-          userId: query.userId,
+
+      if (roleIds.length > 0) {
+        await tx.sysUserRole.createMany({
+          data: roleIds.map((roleId) => ({
+            userId,
+            roleId,
+          })),
         });
       }
-      const roleEntity = this.sysUserWithRoleEntityRep.createQueryBuilder('roleEntity');
-      const roleValues = roleIds.map((id) => {
-        return {
-          userId: query.userId,
-          roleId: id,
-        };
-      });
-      roleEntity.insert().values(roleValues).execute();
-    }
+    });
+
     return ResultData.ok();
   }
 
-  /**
-   * 修改用户状态
-   * @param changeStatusDto
-   * @returns
-   */
   async changeStatus(changeStatusDto: ChangeStatusDto) {
-    const userData = await this.userRepo.findOne({
+    const userData = await this.prisma.sysUser.findUnique({
       where: {
         userId: changeStatusDto.userId,
       },
-      select: ['userType'],
+      select: {
+        userType: true,
+      },
     });
-    if (userData.userType === SYS_USER_TYPE.SYS) {
+    if (userData?.userType === SYS_USER_TYPE.SYS) {
       return ResultData.fail(500, '系统角色不可停用');
     }
 
-    const res = await this.userRepo.update(
-      { userId: changeStatusDto.userId },
-      {
+    const res = await this.prisma.sysUser.update({
+      where: {
+        userId: changeStatusDto.userId,
+      },
+      data: {
         status: changeStatusDto.status,
       },
-    );
+    });
     return ResultData.ok(res);
   }
 
-  /**
-   * 部门树
-   * @returns
-   */
   async deptTree() {
     const tree = await this.deptService.deptTree();
     return ResultData.ok(tree);
   }
 
-  /**
-   * 获取角色已分配用户
-   * @param query
-   * @returns
-   */
   async allocatedList(query: AllocatedListDto) {
-    const roleWidthRoleList = await this.sysUserWithRoleEntityRep.find({
+    const roleWidthRoleList = await this.prisma.sysUserRole.findMany({
       where: {
-        roleId: +query.roleId,
+        roleId: Number(query.roleId),
       },
-      select: ['userId'],
+      select: {
+        userId: true,
+      },
     });
     if (roleWidthRoleList.length === 0) {
       return ResultData.ok({
@@ -750,155 +598,144 @@ export class UserService {
         total: 0,
       });
     }
-    const userIds = roleWidthRoleList.map((item) => item.userId);
-    const entity = this.userRepo.createQueryBuilder('user');
-    entity.where('user.delFlag = :delFlag', { delFlag: '0' });
-    entity.andWhere('user.status = :status', { status: '0' });
-    entity.andWhere('user.userId IN (:...userIds)', { userIds: userIds });
-    if (query.userName) {
-      entity.andWhere(`user.userName LIKE "%${query.userName}%"`);
-    }
 
-    if (query.phonenumber) {
-      entity.andWhere(`user.phonenumber LIKE "%${query.phonenumber}%"`);
-    }
-    entity.skip(query.pageSize * (query.pageNum - 1)).take(query.pageSize);
-    //联查部门详情
-    entity.leftJoinAndMapOne('user.dept', SysDeptEntity, 'dept', 'dept.deptId = user.deptId');
-    const [list, total] = await entity.getManyAndCount();
+    const userIds = roleWidthRoleList.map((item) => item.userId);
+    const where = this.buildAllocatedWhere(query, {
+      in: userIds,
+    });
+    const pagination = this.getPagination(query);
+
+    const [list, total] = await Promise.all([
+      this.prisma.sysUser.findMany({
+        where,
+        include: {
+          dept: true,
+        },
+        ...(pagination ?? {}),
+        orderBy: [{ userId: 'asc' }],
+      }),
+      this.prisma.sysUser.count({ where }),
+    ]);
+
     return ResultData.ok({
       list,
       total,
     });
   }
 
-  /**
-   * 获取角色未分配用户
-   * @param query
-   * @returns
-   */
   async unallocatedList(query: AllocatedListDto) {
-    const roleWidthRoleList = await this.sysUserWithRoleEntityRep.find({
+    const roleWidthRoleList = await this.prisma.sysUserRole.findMany({
       where: {
-        roleId: +query.roleId,
+        roleId: Number(query.roleId),
       },
-      select: ['userId'],
+      select: {
+        userId: true,
+      },
     });
 
     const userIds = roleWidthRoleList.map((item) => item.userId);
-    const entity = this.userRepo.createQueryBuilder('user');
-    entity.where('user.delFlag = :delFlag', { delFlag: '0' });
-    entity.andWhere('user.status = :status', { status: '0' });
-    entity.andWhere({
-      userId: Not(In(userIds)),
-    });
-    if (query.userName) {
-      entity.andWhere(`user.userName LIKE "%${query.userName}%"`);
-    }
+    const where = this.buildAllocatedWhere(
+      query,
+      userIds.length > 0
+        ? {
+            notIn: userIds,
+          }
+        : undefined,
+    );
+    const pagination = this.getPagination(query);
 
-    if (query.phonenumber) {
-      entity.andWhere(`user.phonenumber LIKE "%${query.phonenumber}%"`);
-    }
-    entity.skip(query.pageSize * (query.pageNum - 1)).take(query.pageSize);
-    //联查部门详情
-    entity.leftJoinAndMapOne('user.dept', SysDeptEntity, 'dept', 'dept.deptId = user.deptId');
-    const [list, total] = await entity.getManyAndCount();
+    const [list, total] = await Promise.all([
+      this.prisma.sysUser.findMany({
+        where,
+        include: {
+          dept: true,
+        },
+        ...(pagination ?? {}),
+        orderBy: [{ userId: 'asc' }],
+      }),
+      this.prisma.sysUser.count({ where }),
+    ]);
+
     return ResultData.ok({
       list,
       total,
     });
   }
 
-  /**
-   * 用户解绑角色
-   * @param data
-   * @returns
-   */
   async authUserCancel(data: AuthUserCancelDto) {
-    await this.sysUserWithRoleEntityRep.delete({
-      userId: data.userId,
-      roleId: data.roleId,
+    await this.prisma.sysUserRole.deleteMany({
+      where: {
+        userId: data.userId,
+        roleId: data.roleId,
+      },
     });
     return ResultData.ok();
   }
 
-  /**
-   * 用户批量解绑角色
-   * @param data
-   * @returns
-   */
   async authUserCancelAll(data: AuthUserCancelAllDto) {
     const userIds = data.userIds.split(',').map((id) => +id);
-    await this.sysUserWithRoleEntityRep.delete({
-      userId: In(userIds),
-      roleId: +data.roleId,
-    });
-    return ResultData.ok();
-  }
-
-  /**
-   * 用户批量绑定角色
-   * @param data
-   * @returns
-   */
-  async authUserSelectAll(data: AuthUserSelectAllDto) {
-    const userIds = data.userIds.split(',');
-    const entitys = userIds.map((userId) => {
-      const sysDeptEntityEntity = new SysUserWithRoleEntity();
-      return Object.assign(sysDeptEntityEntity, {
-        userId: userId,
+    await this.prisma.sysUserRole.deleteMany({
+      where: {
+        userId: {
+          in: userIds,
+        },
         roleId: +data.roleId,
-      });
+      },
     });
-    await this.sysUserWithRoleEntityRep.save(entitys);
     return ResultData.ok();
   }
 
-  /**
-   * 个人中心-用户信息
-   * @param user
-   * @returns
-   */
+  async authUserSelectAll(data: AuthUserSelectAllDto) {
+    const userIds = data.userIds.split(',').map((id) => Number(id));
+    if (userIds.length > 0) {
+      await this.prisma.sysUserRole.createMany({
+        data: userIds.map((userId) => ({
+          userId,
+          roleId: +data.roleId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+    return ResultData.ok();
+  }
+
   async profile(user) {
     return ResultData.ok(user);
   }
 
-  /**
-   * 个人中心-用户信息
-   * @param user
-   * @returns
-   */
   async updateProfile(user: UserType, updateProfileDto: UpdateProfileDto) {
-    await this.userRepo.update({ userId: user.user.userId }, updateProfileDto);
+    await this.prisma.sysUser.update({
+      where: {
+        userId: user.user.userId,
+      },
+      data: updateProfileDto,
+    });
     const userData = await this.redisService.get(`${CacheEnum.LOGIN_TOKEN_KEY}${user.token}`);
     userData.user = Object.assign(userData.user, updateProfileDto);
     await this.redisService.set(`${CacheEnum.LOGIN_TOKEN_KEY}${user.token}`, userData);
     return ResultData.ok();
   }
 
-  /**
-   * 个人中心-修改密码
-   * @param user
-   * @param updatePwdDto
-   * @returns
-   */
   async updatePwd(user: UserType, updatePwdDto: UpdatePwdDto) {
     if (updatePwdDto.oldPassword === updatePwdDto.newPassword) {
       return ResultData.fail(500, '新密码不能与旧密码相同');
     }
-    if (bcrypt.compareSync(user.user.password, updatePwdDto.oldPassword)) {
+    if (!bcrypt.compareSync(updatePwdDto.oldPassword, user.user.password)) {
       return ResultData.fail(500, '修改密码失败，旧密码错误');
     }
 
-    const password = await bcrypt.hashSync(updatePwdDto.newPassword, bcrypt.genSaltSync(10));
-    await this.userRepo.update({ userId: user.user.userId }, { password: password });
+    const password = bcrypt.hashSync(updatePwdDto.newPassword, bcrypt.genSaltSync(10));
+    await this.prisma.sysUser.update({
+      where: {
+        userId: user.user.userId,
+      },
+      data: {
+        password,
+      },
+    });
     return ResultData.ok();
   }
 
-  /**
-   * 导出用户信息数据为xlsx
-   * @param res
-   */
   async export(res: Response, body: ListUserDto, user: UserType['user']) {
     delete body.pageNum;
     delete body.pageSize;
@@ -921,5 +758,149 @@ export class UserService {
       ],
     };
     ExportTable(options, res);
+  }
+
+  private async buildUserListWhere(query: ListUserDto, user: UserType['user']) {
+    const where: Record<string, unknown> = {
+      delFlag: '0',
+    };
+
+    if (user) {
+      const scope = await this.resolveUserScope(user);
+      if (scope.deptIds) {
+        where.deptId = {
+          in: scope.deptIds,
+        };
+      }
+      if (scope.selfOnly) {
+        where.userId = user.userId;
+      }
+    }
+
+    if (query.deptId) {
+      const deptIds = await this.deptService.findDeptIdsByDataScope(+query.deptId, DataScopeEnum.DATA_SCOPE_DEPT_AND_CHILD);
+      if (where.deptId && 'in' in (where.deptId as Record<string, unknown>)) {
+        const scopedDeptIds = ((where.deptId as { in: number[] }).in ?? []).filter((deptId) => deptIds.includes(deptId));
+        where.deptId = {
+          in: scopedDeptIds,
+        };
+      } else {
+        where.deptId = {
+          in: deptIds,
+        };
+      }
+    }
+
+    if (query.userName) {
+      where.userName = {
+        contains: query.userName,
+      };
+    }
+
+    if (query.phonenumber) {
+      where.phonenumber = {
+        contains: query.phonenumber,
+      };
+    }
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    if (query.params?.beginTime && query.params?.endTime) {
+      where.createTime = {
+        gte: new Date(query.params.beginTime),
+        lte: new Date(query.params.endTime),
+      };
+    }
+
+    return where;
+  }
+
+  private async resolveUserScope(user: UserType['user']) {
+    const deptIds: number[] = [];
+    let dataScopeAll = false;
+    let dataScopeSelf = false;
+
+    for (const role of user.roles || []) {
+      if (role.dataScope === DataScopeEnum.DATA_SCOPE_ALL) {
+        dataScopeAll = true;
+        break;
+      }
+
+      if (role.dataScope === DataScopeEnum.DATA_SCOPE_CUSTOM) {
+        deptIds.push(...(await this.roleService.findRoleWithDeptIds(role.roleId)));
+      } else if (role.dataScope === DataScopeEnum.DATA_SCOPE_DEPT || role.dataScope === DataScopeEnum.DATA_SCOPE_DEPT_AND_CHILD) {
+        deptIds.push(...(await this.deptService.findDeptIdsByDataScope(user.deptId, role.dataScope)));
+      } else if (role.dataScope === DataScopeEnum.DATA_SCOPE_SELF) {
+        dataScopeSelf = true;
+      }
+    }
+
+    if (dataScopeAll) {
+      return {
+        deptIds: null,
+        selfOnly: false,
+      };
+    }
+
+    if (deptIds.length > 0) {
+      return {
+        deptIds: Uniq(deptIds),
+        selfOnly: false,
+      };
+    }
+
+    return {
+      deptIds: null,
+      selfOnly: dataScopeSelf,
+    };
+  }
+
+  private getPagination(query: { pageSize?: number | string; pageNum?: number | string }) {
+    if (!query.pageSize || !query.pageNum) {
+      return null;
+    }
+
+    const pageSize = Number(query.pageSize);
+    const pageNum = Number(query.pageNum);
+
+    return {
+      skip: pageSize * (pageNum - 1),
+      take: pageSize,
+    };
+  }
+
+  private buildAllocatedWhere(query: AllocatedListDto, userIdFilter?: { in?: number[]; notIn?: number[] }) {
+    const where: Record<string, unknown> = {
+      delFlag: '0',
+      status: '0',
+    };
+
+    if (userIdFilter?.in) {
+      where.userId = {
+        in: userIdFilter.in,
+      };
+    }
+
+    if (userIdFilter?.notIn) {
+      where.userId = {
+        notIn: userIdFilter.notIn,
+      };
+    }
+
+    if (query.userName) {
+      where.userName = {
+        contains: query.userName,
+      };
+    }
+
+    if (query.phonenumber) {
+      where.phonenumber = {
+        contains: query.phonenumber,
+      };
+    }
+
+    return where;
   }
 }

@@ -1,73 +1,72 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, FindManyOptions } from 'typeorm';
 import { Response } from 'express';
 import { ResultData } from 'src/common/utils/result';
-import { ListToTree } from 'src/common/utils/index';
+import { ListToTree, Uniq } from 'src/common/utils/index';
 import { ExportTable } from 'src/common/utils/export';
-
 import { DataScopeEnum } from 'src/common/enum/index';
-import { SysRoleEntity } from './entities/role.entity';
-import { SysRoleWithMenuEntity } from './entities/role-width-menu.entity';
-import { SysRoleWithDeptEntity } from './entities/role-width-dept.entity';
-import { SysDeptEntity } from '../dept/entities/dept.entity';
 import { MenuService } from '../menu/menu.service';
 import { CreateRoleDto, UpdateRoleDto, ListRoleDto, ChangeStatusDto } from './dto/index';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class RoleService {
   constructor(
-    @InjectRepository(SysRoleEntity)
-    private readonly sysRoleEntityRep: Repository<SysRoleEntity>,
-    @InjectRepository(SysRoleWithMenuEntity)
-    private readonly sysRoleWithMenuEntityRep: Repository<SysRoleWithMenuEntity>,
-    @InjectRepository(SysRoleWithDeptEntity)
-    private readonly sysRoleWithDeptEntityRep: Repository<SysRoleWithDeptEntity>,
-    @InjectRepository(SysDeptEntity)
-    private readonly sysDeptEntityRep: Repository<SysDeptEntity>,
+    private readonly prisma: PrismaService,
     private readonly menuService: MenuService,
   ) {}
+
   async create(createRoleDto: CreateRoleDto) {
-    const res = await this.sysRoleEntityRep.save(createRoleDto);
-    const entity = this.sysRoleWithMenuEntityRep.createQueryBuilder('entity');
-    const values = createRoleDto.menuIds.map((id) => {
-      return {
-        roleId: res.roleId,
-        menuId: id,
-      };
+    const { menuIds = [], deptIds = [], ...roleData } = createRoleDto;
+    const res = await this.prisma.sysRole.create({
+      data: this.normalizeRoleWriteData(roleData) as never,
     });
-    entity.insert().values(values).execute();
+
+    await this.prisma.$transaction(async (tx) => {
+      if (menuIds.length > 0) {
+        await tx.sysRoleMenu.createMany({
+          data: menuIds.map((menuId) => ({
+            roleId: res.roleId,
+            menuId,
+          })),
+        });
+      }
+
+      if (roleData.dataScope === DataScopeEnum.DATA_SCOPE_CUSTOM && deptIds.length > 0) {
+        await tx.sysRoleDept.createMany({
+          data: deptIds.map((deptId) => ({
+            roleId: res.roleId,
+            deptId,
+          })),
+        });
+      }
+    });
+
     return ResultData.ok(res);
   }
 
   async findAll(query: ListRoleDto) {
-    const entity = this.sysRoleEntityRep.createQueryBuilder('entity');
-    entity.where('entity.delFlag = :delFlag', { delFlag: '0' });
-
-    if (query.roleName) {
-      entity.andWhere(`entity.roleName LIKE "%${query.roleName}%"`);
-    }
-
-    if (query.roleKey) {
-      entity.andWhere(`entity.roleKey LIKE "%${query.roleKey}%"`);
-    }
-
-    if (query.roleId) {
-      entity.andWhere('entity.roleId = :roleId', { roleId: query.roleId });
-    }
-
-    if (query.status) {
-      entity.andWhere('entity.status = :status', { status: query.status });
-    }
-
-    if (query.params?.beginTime && query.params?.endTime) {
-      entity.andWhere('entity.createTime BETWEEN :start AND :end', { start: query.params.beginTime, end: query.params.endTime });
-    }
+    const where = this.buildWhere(query);
+    const findManyArgs: {
+      where: Record<string, unknown>;
+      skip?: number;
+      take?: number;
+      orderBy: Array<Record<string, 'asc' | 'desc'>>;
+    } = {
+      where,
+      orderBy: [{ roleSort: 'asc' }, { roleId: 'asc' }],
+    };
 
     if (query.pageSize && query.pageNum) {
-      entity.skip(query.pageSize * (query.pageNum - 1)).take(query.pageSize);
+      const pageSize = Number(query.pageSize);
+      const pageNum = Number(query.pageNum);
+      findManyArgs.skip = pageSize * (pageNum - 1);
+      findManyArgs.take = pageSize;
     }
-    const [list, total] = await entity.getManyAndCount();
+
+    const [list, total] = await Promise.all([
+      this.prisma.sysRole.findMany(findManyArgs),
+      this.prisma.sysRole.count({ where }),
+    ]);
 
     return ResultData.ok({
       list,
@@ -76,9 +75,9 @@ export class RoleService {
   }
 
   async findOne(roleId: number) {
-    const res = await this.sysRoleEntityRep.findOne({
+    const res = await this.prisma.sysRole.findFirst({
       where: {
-        roleId: roleId,
+        roleId,
         delFlag: '0',
       },
     });
@@ -86,152 +85,165 @@ export class RoleService {
   }
 
   async update(updateRoleDto: UpdateRoleDto) {
-    const hasId = await this.sysRoleWithMenuEntityRep.findOne({
-      where: {
-        roleId: updateRoleDto.roleId,
-      },
-      select: ['roleId'],
-    });
+    const { roleId, menuIds = [], deptIds, ...roleData } = updateRoleDto;
 
-    //角色已关联菜单
-    if (hasId) {
-      await this.sysRoleWithMenuEntityRep.delete({
-        roleId: updateRoleDto.roleId,
+    const res = await this.prisma.$transaction(async (tx) => {
+      await tx.sysRoleMenu.deleteMany({
+        where: {
+          roleId,
+        },
       });
-    }
 
-    //TODO 后续改造为事务
-    const entity = this.sysRoleWithMenuEntityRep.createQueryBuilder('entity');
-    const values = updateRoleDto.menuIds.map((id) => {
-      return {
-        roleId: updateRoleDto.roleId,
-        menuId: id,
-      };
+      if (menuIds.length > 0) {
+        await tx.sysRoleMenu.createMany({
+          data: menuIds.map((menuId) => ({
+            roleId,
+            menuId,
+          })),
+        });
+      }
+
+      return tx.sysRole.update({
+        where: {
+          roleId,
+        },
+        data: this.normalizeRoleWriteData(roleData) as never,
+      });
     });
 
-    delete (updateRoleDto as any).menuIds;
-    entity.insert().values(values).execute();
-    const res = await this.sysRoleEntityRep.update({ roleId: updateRoleDto.roleId }, updateRoleDto);
     return ResultData.ok(res);
   }
 
   async dataScope(updateRoleDto: UpdateRoleDto) {
-    const hasId = await this.sysRoleWithDeptEntityRep.findOne({
-      where: {
-        roleId: updateRoleDto.roleId,
-      },
-      select: ['roleId'],
-    });
+    const { roleId, deptIds = [], menuIds, ...roleData } = updateRoleDto;
 
-    //角色已有权限 或者 非自定义权限 先删除权限关联
-    if (hasId || updateRoleDto.dataScope !== DataScopeEnum.DATA_SCOPE_CUSTOM) {
-      await this.sysRoleWithDeptEntityRep.delete({
-        roleId: updateRoleDto.roleId,
+    const res = await this.prisma.$transaction(async (tx) => {
+      await tx.sysRoleDept.deleteMany({
+        where: {
+          roleId,
+        },
       });
-    }
 
-    const entity = this.sysRoleWithDeptEntityRep.createQueryBuilder('entity');
-    const values = updateRoleDto.deptIds.map((id) => {
-      return {
-        roleId: updateRoleDto.roleId,
-        deptId: id,
-      };
+      if (roleData.dataScope === DataScopeEnum.DATA_SCOPE_CUSTOM && deptIds.length > 0) {
+        await tx.sysRoleDept.createMany({
+          data: deptIds.map((deptId) => ({
+            roleId,
+            deptId,
+          })),
+        });
+      }
+
+      return tx.sysRole.update({
+        where: {
+          roleId,
+        },
+        data: this.normalizeRoleWriteData(roleData) as never,
+      });
     });
-    entity.insert().values(values).execute();
 
-    delete (updateRoleDto as any).deptIds;
-
-    const res = await this.sysRoleEntityRep.update({ roleId: updateRoleDto.roleId }, updateRoleDto);
     return ResultData.ok(res);
   }
 
   async changeStatus(changeStatusDto: ChangeStatusDto) {
-    const res = await this.sysRoleEntityRep.update(
-      { roleId: changeStatusDto.roleId },
-      {
+    const res = await this.prisma.sysRole.update({
+      where: {
+        roleId: changeStatusDto.roleId,
+      },
+      data: {
         status: changeStatusDto.status,
       },
-    );
+    });
     return ResultData.ok(res);
   }
 
   async remove(roleIds: number[]) {
-    const data = await this.sysRoleEntityRep.update(
-      { roleId: In(roleIds) },
-      {
+    const data = await this.prisma.sysRole.updateMany({
+      where: {
+        roleId: {
+          in: roleIds,
+        },
+      },
+      data: {
         delFlag: '1',
       },
-    );
+    });
     return ResultData.ok(data);
   }
 
   async deptTree(roleId: number) {
-    const res = await this.sysDeptEntityRep.find({
+    const res = await this.prisma.sysDept.findMany({
       where: {
         delFlag: '0',
       },
+      orderBy: [{ parentId: 'asc' }, { orderNum: 'asc' }],
     });
     const tree = ListToTree(
       res,
       (m) => +m.deptId,
       (m) => m.deptName,
     );
-    const deptIds = await this.sysRoleWithDeptEntityRep.find({
-      where: { roleId: roleId },
-      select: ['deptId'],
+    const deptIds = await this.prisma.sysRoleDept.findMany({
+      where: { roleId },
+      select: {
+        deptId: true,
+      },
     });
-    const checkedKeys = deptIds.map((item) => {
-      return item.deptId;
-    });
+    const checkedKeys = deptIds.map((item) => item.deptId);
     return ResultData.ok({
       depts: tree,
-      checkedKeys: checkedKeys,
+      checkedKeys,
     });
   }
 
-  async findRoles(where: FindManyOptions<SysRoleEntity>) {
-    return await this.sysRoleEntityRep.find(where);
+  async findRoles(where: Record<string, unknown>) {
+    return this.prisma.sysRole.findMany({ where });
   }
-  /**
-   * 根据角色获取用户权限列表
-   */
+
   async getPermissionsByRoleIds(roleIds: number[]) {
-    if (roleIds.includes(1)) return [{ perms: '*:*:*' }]; //当角色为超级管理员时，开放所有权限
-    const list = await this.sysRoleWithMenuEntityRep.find({
+    if (roleIds.includes(1)) {
+      return [{ perms: '*:*:*' }];
+    }
+
+    if (roleIds.length === 0) {
+      return [];
+    }
+
+    const list = await this.prisma.sysRoleMenu.findMany({
       where: {
-        roleId: In(roleIds),
+        roleId: {
+          in: roleIds,
+        },
       },
-      select: ['menuId'],
+      select: {
+        menuId: true,
+      },
     });
-    const menuIds = list.map((item) => item.menuId);
-    const permission = await this.menuService.findMany({
-      where: { delFlag: '0', status: '0', menuId: In(menuIds) },
+    const menuIds = Uniq(list.map((item) => item.menuId));
+    if (menuIds.length === 0) {
+      return [];
+    }
+
+    return this.menuService.findMany({
+      delFlag: '0',
+      status: '0',
+      menuId: {
+        in: menuIds,
+      },
     });
-    return permission;
   }
 
-  /**
-   * 根据角色ID异步查找与之关联的部门ID列表。
-   *
-   * @param roleId - 角色的ID，用于查询与该角色关联的部门。
-   * @returns 返回一个Promise，该Promise解析为一个部门ID的数组。
-   */
   async findRoleWithDeptIds(roleId: number) {
-    // 使用TypeORM的实体仓库查询方法，异步查找与指定角色ID相关联的部门ID。
-    const res = await this.sysRoleWithDeptEntityRep.find({
-      select: ['deptId'],
+    const res = await this.prisma.sysRoleDept.findMany({
+      select: {
+        deptId: true,
+      },
       where: {
-        roleId: roleId,
+        roleId,
       },
     });
-    // 将查询结果映射为仅包含部门ID的数组并返回。
     return res.map((item) => item.deptId);
   }
 
-  /**
-   * 导出角色管理数据为xlsx
-   * @param res
-   */
   async export(res: Response, body: ListRoleDto) {
     delete body.pageNum;
     delete body.pageSize;
@@ -249,5 +261,52 @@ export class RoleService {
       ],
     };
     ExportTable(options, res);
+  }
+
+  private buildWhere(query: ListRoleDto) {
+    const where: Record<string, unknown> = {
+      delFlag: '0',
+    };
+
+    if (query.roleName) {
+      where.roleName = { contains: query.roleName };
+    }
+
+    if (query.roleKey) {
+      where.roleKey = { contains: query.roleKey };
+    }
+
+    if (query.roleId) {
+      where.roleId = Number(query.roleId);
+    }
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    if (query.params?.beginTime && query.params?.endTime) {
+      where.createTime = {
+        gte: new Date(query.params.beginTime),
+        lte: new Date(query.params.endTime),
+      };
+    }
+
+    return where;
+  }
+
+  private normalizeRoleWriteData(roleData: Record<string, unknown>) {
+    return {
+      ...roleData,
+      ...(roleData.menuCheckStrictly !== undefined
+        ? {
+            menuCheckStrictly: roleData.menuCheckStrictly ? 1 : 0,
+          }
+        : {}),
+      ...(roleData.deptCheckStrictly !== undefined
+        ? {
+            deptCheckStrictly: roleData.deptCheckStrictly ? 1 : 0,
+          }
+        : {}),
+    };
   }
 }
