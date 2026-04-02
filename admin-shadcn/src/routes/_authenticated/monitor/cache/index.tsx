@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { assertRouteAccess } from '@/features/auth/lib/route-access'
-import { CacheMonitor } from '@/features/cache'
+import { assertRouteAccess } from '@/views/auth/lib/route-access'
+import { CacheMonitor } from '@/views/cache'
 
 export const Route = createFileRoute('/_authenticated/monitor/cache/')({
   beforeLoad: () => {
@@ -8,3 +8,4 @@ export const Route = createFileRoute('/_authenticated/monitor/cache/')({
   },
   component: CacheMonitor,
 })
+

@@ -39,7 +39,7 @@ export function useSidebarData(): SidebarData {
       {
         name: appConfig.name,
         logo: Command,
-        plan: '主站',
+        plan: '当前项目',
       },
       {
         name: '并行开发',

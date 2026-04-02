@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ResultData } from 'src/common/utils/result';
 import os, { networkInterfaces } from 'os';
 import path from 'path';
+import { execSync } from 'child_process';
 import * as nodeDiskInfo from 'node-disk-info';
 
 @Injectable()
@@ -29,10 +30,15 @@ export class ServerService {
 
   async getDiskStatus() {
     const disks = await nodeDiskInfo.getDiskInfoSync();
+    const windowsDriveTypes = this.getWindowsDriveTypes();
     const sysFiles = disks.map((disk: any) => {
       return {
         dirName: disk._mounted,
-        typeName: disk._filesystem,
+        typeName: this.resolveDiskTypeName({
+          mounted: disk._mounted,
+          rawTypeName: disk._filesystem,
+          windowsDriveTypes,
+        }),
         total: this.bytesToGB(disk._blocks) + 'GB',
         used: this.bytesToGB(disk._used) + 'GB',
         free: this.bytesToGB(disk._available) + 'GB',
@@ -40,6 +46,95 @@ export class ServerService {
       };
     });
     return sysFiles;
+  }
+
+  getWindowsDriveTypes() {
+    if (os.platform() !== 'win32') {
+      return {};
+    }
+
+    try {
+      const output = execSync(
+        'wmic logicaldisk get Caption,DriveType /format:list',
+        {
+          windowsHide: true,
+          encoding: 'buffer',
+        },
+      ).toString('utf8');
+
+      return this.parseWindowsDriveTypeOutput(output);
+    } catch {
+      return {};
+    }
+  }
+
+  parseWindowsDriveTypeOutput(output: string) {
+    const driveTypes: Record<string, string> = {};
+    let caption = '';
+    let driveType = '';
+
+    output.split(/\r?\n/).forEach((line) => {
+      const normalizedLine = line.replace(/\r/g, '').trim();
+
+      if (!normalizedLine) {
+        if (caption) {
+          driveTypes[caption] = this.mapWindowsDriveType(driveType);
+        }
+
+        caption = '';
+        driveType = '';
+        return;
+      }
+
+      const [key, ...rest] = normalizedLine.split('=');
+      const value = rest.join('=').trim();
+
+      if (key === 'Caption') {
+        caption = value;
+      }
+
+      if (key === 'DriveType') {
+        driveType = value;
+      }
+    });
+
+    if (caption) {
+      driveTypes[caption] = this.mapWindowsDriveType(driveType);
+    }
+
+    return driveTypes;
+  }
+
+  mapWindowsDriveType(driveType: string) {
+    const driveTypeMap: Record<string, string> = {
+      '0': '未知设备',
+      '1': '无根目录',
+      '2': '可移动磁盘',
+      '3': '本地固定磁盘',
+      '4': '网络磁盘',
+      '5': '光驱',
+      '6': '内存磁盘',
+    };
+
+    return driveTypeMap[driveType] ?? '未知磁盘';
+  }
+
+  resolveDiskTypeName({
+    mounted,
+    rawTypeName,
+    windowsDriveTypes,
+  }: {
+    mounted: string;
+    rawTypeName?: string;
+    windowsDriveTypes?: Record<string, string>;
+  }) {
+    const normalizedMounted = mounted?.trim();
+
+    if (normalizedMounted && windowsDriveTypes?.[normalizedMounted]) {
+      return windowsDriveTypes[normalizedMounted];
+    }
+
+    return rawTypeName?.trim() || '-';
   }
 
   // 获取服务器IP地址

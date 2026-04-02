@@ -1,6 +1,6 @@
 import z from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
-import { Apps } from '@/features/apps'
+import { Apps } from '@/views/apps'
 
 const appsSearchSchema = z.object({
   type: z
@@ -15,3 +15,4 @@ export const Route = createFileRoute('/_authenticated/apps/')({
   validateSearch: appsSearchSchema,
   component: Apps,
 })
+

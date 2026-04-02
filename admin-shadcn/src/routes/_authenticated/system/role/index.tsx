@@ -1,7 +1,7 @@
 import z from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
-import { assertRouteAccess } from '@/features/auth/lib/route-access'
-import { Roles } from '@/features/roles'
+import { assertRouteAccess } from '@/views/auth/lib/route-access'
+import { Roles } from '@/views/roles'
 
 const rolesSearchSchema = z.object({
   page: z.number().optional().catch(1),
@@ -23,3 +23,4 @@ export const Route = createFileRoute('/_authenticated/system/role/')({
   },
   component: Roles,
 })
+

@@ -1,7 +1,7 @@
 import z from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
-import { assertRouteAccess } from '@/features/auth/lib/route-access'
-import { Dicts } from '@/features/dicts'
+import { assertRouteAccess } from '@/views/auth/lib/route-access'
+import { Dicts } from '@/views/dicts'
 
 const dictsSearchSchema = z.object({
   page: z.number().optional().catch(1),
@@ -26,3 +26,4 @@ export const Route = createFileRoute('/_authenticated/system/dict/')({
   },
   component: Dicts,
 })
+

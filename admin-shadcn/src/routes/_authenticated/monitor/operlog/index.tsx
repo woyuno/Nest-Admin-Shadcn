@@ -1,7 +1,7 @@
 import z from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
-import { assertRouteAccess } from '@/features/auth/lib/route-access'
-import { Operlog } from '@/features/operlog'
+import { assertRouteAccess } from '@/views/auth/lib/route-access'
+import { Operlog } from '@/views/operlog'
 
 const operlogSearchSchema = z.object({
   page: z.number().optional().catch(1),
@@ -38,3 +38,4 @@ export const Route = createFileRoute('/_authenticated/monitor/operlog/')({
   },
   component: Operlog,
 })
+

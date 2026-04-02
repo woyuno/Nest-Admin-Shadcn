@@ -1,13 +1,13 @@
 import { Link } from '@tanstack/react-router'
 import {
   BadgeCheck,
-  Bell,
   ChevronsUpDown,
   CreditCard,
   LogOut,
   Sparkles,
 } from 'lucide-react'
 import useDialogState from '@/hooks/use-dialog-state'
+import { getSettingsProfileEntryPath } from '@/views/settings/lib/settings-paths'
 import { useAuthStore } from '@/stores/auth-store'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -38,6 +38,7 @@ type NavUserProps = {
 export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar()
   const [open, setOpen] = useDialogState()
+  const settingsProfileEntryPath = getSettingsProfileEntryPath()
   const currentUser = useAuthStore((state) => state.auth.user)
   const resolvedUser = {
     name: currentUser?.displayName || currentUser?.userName || user.name,
@@ -101,15 +102,9 @@ export function NavUser({ user }: NavUserProps) {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to='/user/profile'>
+                  <Link to={settingsProfileEntryPath}>
                     <CreditCard />
                     资料
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to='/settings/notifications'>
-                    <Bell />
-                    通知
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -130,3 +125,4 @@ export function NavUser({ user }: NavUserProps) {
     </>
   )
 }
+

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 import { type NavGroup } from '@/components/layout/types'
-import { type BackendMenuRoute } from '@/features/auth/lib/authorization-contract'
+import { type BackendMenuRoute } from '@/views/auth/lib/authorization-contract'
 
 const ACCESS_TOKEN = 'Admin-Token'
 
@@ -89,3 +89,4 @@ export const useAuthStore = create<AuthState>()((set) => {
     },
   }
 })
+

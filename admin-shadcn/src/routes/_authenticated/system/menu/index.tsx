@@ -1,7 +1,7 @@
 import z from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
-import { assertRouteAccess } from '@/features/auth/lib/route-access'
-import { Menus } from '@/features/menus'
+import { assertRouteAccess } from '@/views/auth/lib/route-access'
+import { Menus } from '@/views/menus'
 
 const menusSearchSchema = z.object({
   menuName: z.string().optional().catch(''),
@@ -18,3 +18,4 @@ export const Route = createFileRoute('/_authenticated/system/menu/')({
   },
   component: Menus,
 })
+

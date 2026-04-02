@@ -1,7 +1,7 @@
 import z from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
-import { assertRouteAccess } from '@/features/auth/lib/route-access'
-import { Tasks } from '@/features/tasks'
+import { assertRouteAccess } from '@/views/auth/lib/route-access'
+import { Tasks } from '@/views/tasks'
 
 const tasksSearchSchema = z.object({
   page: z.number().optional().catch(1),
@@ -24,3 +24,4 @@ export const Route = createFileRoute('/_authenticated/monitor/job/')({
   },
   component: Tasks,
 })
+
