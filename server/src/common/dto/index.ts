@@ -18,6 +18,8 @@ export class DateParamsDTO {
  * 分页DTO
  */
 export class PagingDto {
+  // HTTP query 进入 Nest 时默认是字符串；
+  // 进入 Prisma skip/take 等严格 number 字段前，必须显式转换。
   @ApiProperty({ required: true, description: '当前分页', default: 1 })
   @IsOptional()
   @Transform(({ value }) => {

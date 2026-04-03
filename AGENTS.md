@@ -2,12 +2,18 @@
 
 ## 项目概览
 
-这是一个前后端分离的 Nest-Admin-Shadcn 仓库，根目录本身不是可直接运行的 Node 项目，主要包含两个子应用：
+这是一个前后端分离的 Nest-Admin-Shadcn 仓库，目标不只是维护当前项目，也包括作为可复制的新项目后台模板。主要包含两个子应用：
 
 - `server`：NestJS 10 后端，Prisma + MySQL + Redis
 - `admin-shadcn`：React 19 管理端，Vite 8 + TanStack Router + TanStack Query + shadcn/ui
 
 默认面向中国区用户，所有新增或修改的用户可见文案优先使用中文。
+
+本文件的目标受众包括：
+
+- 当前仓库协作者
+- 需要接手本仓库的 agent
+- 准备把本仓库复制为新项目模板的协作者
 
 ## 目录与入口
 
@@ -27,7 +33,17 @@
 
 ## 启动方式
 
-根目录没有统一脚本，请分别进入子目录执行：
+根目录已经提供统一脚本，优先使用：
+
+- `npm run bootstrap`
+- `npm run dev:server`
+- `npm run dev:admin`
+- `npm run build:server`
+- `npm run build:admin`
+- `npm run test:server`
+- `npm run test:admin`
+
+如需分别进入子目录执行，也可以使用：
 
 - 后端安装依赖：`cd server && yarn`
 - 后端开发启动：`cd server && yarn start:dev`
@@ -43,6 +59,11 @@
 前端请求地址来自 `VITE_API_BASE_URL`。本地联调时优先在 `admin-shadcn/.env.local` 中显式设置：
 
 - `VITE_API_BASE_URL=http://localhost:8080`
+
+后端本地运行时，优先通过 `server/.env.local` 或系统环境变量显式提供：
+
+- `NODE_ENV=development`
+- `DATABASE_URL=mysql://root:root@127.0.0.1:3306/nest-admin`
 
 ## 运行前置条件
 
@@ -106,6 +127,21 @@
 
 `admin-shadcn/src/routeTree.gen.ts` 由 TanStack Router 生成，不要手工维护。优先修改 `src/routes/**`。
 
+### 6. HTTP query 与 Prisma number 边界要显式转换
+
+HTTP 查询参数进入 Nest 时默认是字符串，例如：
+
+- `pageNum=1`
+- `pageSize=10`
+
+在进入 Prisma 的 `skip`、`take` 或其他严格 number/int 字段前，必须显式做 `Number(...)` 转换，或走统一分页工具。不要把字符串直接传给 Prisma。
+
+这条规则尤其适用于：
+
+- 列表分页
+- 导出过滤条件
+- 依赖数字主键的 query 参数
+
 ## 强约束
 
 ### 1. 默认沿用仓库现有架构和实现方案
@@ -128,6 +164,8 @@
 - 再通过 Prisma migration 演进数据库
 - 业务查询统一通过 `PrismaService`
 - 不再新增 TypeORM entity、repository 或 `TypeOrmModule` 用法
+
+如果当前目标是把本仓库复制为新项目起点，默认也优先保留这套技术栈与目录结构，不要一开始就大规模替换基础设施。
 
 ### 2. 后端写接口默认必须接入操作日志
 
@@ -200,6 +238,37 @@
 4. 如需接口，补 `src/views/<domain>/api/*.ts`
 5. 如需权限按钮，使用现有 `PermissionGuard`
 
+## 模板使用模式
+
+如果当前任务是“把本仓库作为新项目模板继续开发”，默认遵循以下规则：
+
+1. 优先保持已有目录结构和技术栈，不做大规模替换。
+2. 新增业务模块时，先参考一个现有模块做等形扩展，不要重新发明一套分层。
+3. 修改菜单、权限、路由时，必须同时检查：
+   - 后端菜单数据
+   - 前端路由文件
+   - `page-registry.ts`
+   - 页面权限点
+4. 改分页查询时，必须检查 HTTP query 到 Prisma 的 number 边界转换。
+5. agent 或新协作者在开始工作前，应优先读取：
+   - `README.md`
+   - `AGENTS.md`
+
+推荐的最小启动顺序：
+
+1. `npm run bootstrap`
+2. `npm run dev:server`
+3. `npm run dev:admin`
+4. `npm run verify:template`
+5. 打开登录页，确认 `VITE_API_BASE_URL` 指向 `8080`
+6. 验证登录、菜单、用户管理、定时任务、Swagger
+
+如果你是首次接手这个模板，建议优先顺序改为：
+
+1. 先读 `README.md`
+2. 再读 `AGENTS.md`
+3. 再看 `docs/template/template-onboarding.md`
+
 ## 验证建议
 
 后端常用：
@@ -212,6 +281,10 @@
 - `cd admin-shadcn && pnpm build`
 - `cd admin-shadcn && pnpm test`
 - `cd admin-shadcn && pnpm lint`
+
+模板级静态 smoke：
+
+- `npm run verify:template`
 
 如果只改了路由、权限或菜单映射，至少人工验证：
 
@@ -233,5 +306,6 @@
 
 - 保持中文为主，面向仓库协作者而不是外部营销文案
 - 优先写“这个仓库真实怎么工作”，不要写通用模板话术
+- README 与 AGENTS 发生冲突时，以代码真实结构为准，并尽快修正文档
 - 当发现新的关键联动约束时，优先更新本文件
 

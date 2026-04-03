@@ -4,6 +4,7 @@ import { ResultData } from 'src/common/utils/result';
 import { ExportTable } from 'src/common/utils/export';
 import { Response } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { parsePagination } from 'src/common/utils/pagination';
 
 @Injectable()
 export class JobLogService {
@@ -25,10 +26,9 @@ export class JobLogService {
     };
 
     if (query.pageSize && query.pageNum) {
-      const pageSize = Number(query.pageSize);
-      const pageNum = Number(query.pageNum);
-      findManyArgs.skip = pageSize * (pageNum - 1);
-      findManyArgs.take = pageSize;
+      const { skip, take } = parsePagination(query);
+      findManyArgs.skip = skip;
+      findManyArgs.take = take;
     }
 
     const [list, total] = await Promise.all([

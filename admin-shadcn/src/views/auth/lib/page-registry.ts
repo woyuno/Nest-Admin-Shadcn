@@ -1,6 +1,6 @@
-import { type FrontendPageRegistryItem } from './authorization-contract'
+import { defineFrontendPageRegistry } from './page-registry.contract'
 
-export const frontendPageRegistry: FrontendPageRegistryItem[] = [
+export const frontendPageRegistry = defineFrontendPageRegistry([
   {
     routePath: '/',
     title: '首页',
@@ -112,4 +112,4 @@ export const frontendPageRegistry: FrontendPageRegistryItem[] = [
     componentKeys: ['monitor/cache/list'],
     requiredPermissions: ['monitor:cache:list'],
   },
-]
+])

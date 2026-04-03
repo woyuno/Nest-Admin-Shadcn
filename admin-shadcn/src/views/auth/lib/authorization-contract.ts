@@ -13,9 +13,12 @@ export type BackendMenuRoute = {
 }
 
 export type FrontendPageRegistryItem = {
+  // 前端真实跳转路径，也是 canAccessRoute 判定的主键。
   routePath: string
   title: string
+  // menuPaths 优先用于匹配后端菜单 path。
   menuPaths?: string[]
+  // componentKeys 用于兼容后端 component 字段映射。
   componentKeys?: string[]
   requiredPermissions?: string[]
   requiredRoles?: string[]
@@ -237,6 +240,7 @@ export function buildSidebarGroupsFromMenus(
   menus: BackendMenuRoute[],
   registry: FrontendPageRegistryItem[]
 ): SidebarBuildResult {
+  // registry 是当前模板中菜单接入的唯一人工登记点。
   const warnings: string[] = []
   const navGroups: NavGroup[] = []
   const allowedRoutePaths = new Set<string>()

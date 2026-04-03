@@ -1,0 +1,16 @@
+{
+  "name": "nest-admin-shadcn-workspace",
+  "private": true,
+  "scripts": {
+    "bootstrap": "cd server && yarn && cd ../admin-shadcn && pnpm install",
+    "dev:server": "cd server && yarn start:dev",
+    "dev:admin": "cd admin-shadcn && pnpm dev",
+    "verify:template": "powershell -ExecutionPolicy Bypass -File ./scripts/template-smoke.ps1",
+    "build:server": "cd server && yarn build",
+    "build:admin": "cd admin-shadcn && pnpm build",
+    "test:server": "cd server && yarn test",
+    "test:admin": "cd admin-shadcn && pnpm test",
+    "lint:server": "cd server && yarn lint",
+    "lint:admin": "cd admin-shadcn && pnpm lint"
+  }
+}

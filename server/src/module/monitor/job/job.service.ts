@@ -7,6 +7,7 @@ import { TaskService } from './task.service';
 import { ExportTable } from 'src/common/utils/export';
 import { Response } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { parsePagination } from 'src/common/utils/pagination';
 
 @Injectable()
 export class JobService {
@@ -33,8 +34,9 @@ export class JobService {
   }
 
   // 查询任务列表
-  async list(query: { pageNum?: number; pageSize?: number; jobName?: string; jobGroup?: string; status?: string }) {
-    const { pageNum = 1, pageSize = 10, jobName, jobGroup, status } = query;
+  async list(query: ListJobDto) {
+    const { skip, take } = parsePagination(query);
+    const { jobName, jobGroup, status } = query;
     const where: Record<string, unknown> = {};
 
     if (jobName) {
@@ -52,8 +54,8 @@ export class JobService {
     const [list, total] = await Promise.all([
       this.prisma.sysJob.findMany({
         where,
-        skip: (pageNum - 1) * pageSize,
-        take: pageSize,
+        skip,
+        take,
         orderBy: {
           createTime: 'desc',
         },

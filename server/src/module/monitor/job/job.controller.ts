@@ -16,7 +16,7 @@ export class JobController {
   @Get('list')
   @ApiOperation({ summary: '获取定时任务列表' })
   @RequirePermission('monitor:job:list')
-  list(@Query() query: { pageNum?: number; pageSize?: number; jobName?: string; jobGroup?: string; status?: string }) {
+  list(@Query() query: ListJobDto) {
     return this.jobService.list(query);
   }
 

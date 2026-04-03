@@ -46,7 +46,7 @@ export class CreateJobDto {
   remark?: string;
 }
 
-export class ListJobDto {
+export class ListJobDto extends PagingDto {
   @ApiProperty({ description: '任务名称' })
   @IsOptional()
   @IsString()
@@ -56,7 +56,7 @@ export class ListJobDto {
   @IsOptional()
   @IsString()
   @Length(1, 64)
-  jobGroup: string;
+  jobGroup?: string;
 
   @ApiProperty({ description: '状态（0正常 1暂停）' })
   @IsOptional()
@@ -74,7 +74,7 @@ export class ListJobLogDto extends PagingDto {
   @IsOptional()
   @IsString()
   @Length(1, 64)
-  jobGroup: string;
+  jobGroup?: string;
 
   @ApiProperty({ description: '状态（0正常 1暂停）' })
   @IsOptional()

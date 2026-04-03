@@ -61,4 +61,24 @@ describe('JobService', () => {
       },
     });
   });
+
+  it('should coerce pagination query strings before querying Prisma', async () => {
+    const { service, prisma } = createService();
+    prisma.sysJob.findMany.mockResolvedValueOnce([]);
+    prisma.sysJob.count.mockResolvedValueOnce(0);
+
+    await service.list({
+      pageNum: '1' as unknown as number,
+      pageSize: '10' as unknown as number,
+    });
+
+    expect(prisma.sysJob.findMany).toHaveBeenCalledWith({
+      where: {},
+      skip: 0,
+      take: 10,
+      orderBy: {
+        createTime: 'desc',
+      },
+    });
+  });
 })

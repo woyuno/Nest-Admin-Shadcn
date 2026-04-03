@@ -2,12 +2,7 @@ import { useState } from 'react'
 import { type RowSelectionState } from '@tanstack/react-table'
 import { getRouteApi } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ConfigDrawer } from '@/components/config-drawer'
-import { Header } from '@/components/layout/header'
-import { Main } from '@/components/layout/main'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
-import { ThemeSwitch } from '@/components/theme-switch'
+import { AdminPageShell } from '@/components/layout/admin-page-shell'
 import { fetchUserDeptTree, fetchUsers } from './api/users'
 import { UsersDeptFilter } from './components/users-dept-filter'
 import { UsersDialogs } from './components/users-dialogs'
@@ -39,20 +34,9 @@ export function Users() {
 
   return (
     <UsersProvider>
-      <Header fixed>
-        <Search />
-        <div className='ms-auto flex items-center space-x-4'>
-          <ThemeSwitch />
-          <ConfigDrawer />
-          <ProfileDropdown />
-        </div>
-      </Header>
-
-      <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
-        <div className='flex flex-wrap items-end justify-between gap-2'>
-          <div>
-            <h2 className='text-2xl font-bold tracking-tight'>用户管理</h2>
-          </div>
+      <AdminPageShell
+        title='用户管理'
+        actions={
           <UsersPrimaryButtons
             search={search}
             selectedUsers={selectedUsers}
@@ -61,8 +45,8 @@ export function Users() {
               setSelectedUsers([])
             }}
           />
-        </div>
-        <div className='flex flex-1 flex-col gap-4 lg:flex-row lg:items-start'>
+        }
+        sidebar={
           <UsersDeptFilter
             data={deptTreeQuery.data ?? []}
             selectedDeptId={search.deptId}
@@ -76,31 +60,30 @@ export function Users() {
               })
             }
           />
-          <div className='flex flex-1 flex-col gap-4'>
-            <UsersSearchToolbar
-              key={`${search.username ?? ''}|${search.phonenumber ?? ''}|${search.status?.[0] ?? ''}|${search.beginTime ?? ''}|${search.endTime ?? ''}`}
-              search={search}
-              navigate={navigate}
-            />
-            <UsersTable
-              data={usersData.list}
-              total={usersData.total}
-              isLoading={usersQuery.isLoading}
-              search={search}
-              navigate={navigate}
-              rowSelection={rowSelection}
-              onRowSelectionChange={setRowSelection}
-              onSelectedUsersChange={(nextUsers) =>
-                setSelectedUsers((prev) => {
-                  const prevIds = prev.map((item) => item.userId).join(',')
-                  const nextIds = nextUsers.map((item) => item.userId).join(',')
-                  return prevIds === nextIds ? prev : nextUsers
-                })
-              }
-            />
-          </div>
-        </div>
-      </Main>
+        }
+      >
+        <UsersSearchToolbar
+          key={`${search.username ?? ''}|${search.phonenumber ?? ''}|${search.status?.[0] ?? ''}|${search.beginTime ?? ''}|${search.endTime ?? ''}`}
+          search={search}
+          navigate={navigate}
+        />
+        <UsersTable
+          data={usersData.list}
+          total={usersData.total}
+          isLoading={usersQuery.isLoading}
+          search={search}
+          navigate={navigate}
+          rowSelection={rowSelection}
+          onRowSelectionChange={setRowSelection}
+          onSelectedUsersChange={(nextUsers) =>
+            setSelectedUsers((prev) => {
+              const prevIds = prev.map((item) => item.userId).join(',')
+              const nextIds = nextUsers.map((item) => item.userId).join(',')
+              return prevIds === nextIds ? prev : nextUsers
+            })
+          }
+        />
+      </AdminPageShell>
 
       <UsersDialogs />
     </UsersProvider>

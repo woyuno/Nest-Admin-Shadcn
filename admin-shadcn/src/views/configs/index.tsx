@@ -1,11 +1,6 @@
 import { getRouteApi } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ConfigDrawer } from '@/components/config-drawer'
-import { Header } from '@/components/layout/header'
-import { Main } from '@/components/layout/main'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
-import { ThemeSwitch } from '@/components/theme-switch'
+import { AdminPageShell } from '@/components/layout/admin-page-shell'
 import { fetchConfigs } from './api/configs'
 import { ConfigsDialogs } from './components/configs-dialogs'
 import { ConfigsPrimaryButtons } from './components/configs-primary-buttons'
@@ -27,22 +22,10 @@ export function Configs() {
 
   return (
     <ConfigsProvider>
-      <Header fixed>
-        <Search />
-        <div className='ms-auto flex items-center space-x-4'>
-          <ThemeSwitch />
-          <ConfigDrawer />
-          <ProfileDropdown />
-        </div>
-      </Header>
-
-      <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
-        <div className='flex flex-wrap items-end justify-between gap-2'>
-          <div>
-            <h2 className='text-2xl font-bold tracking-tight'>参数设置</h2>
-          </div>
-          <ConfigsPrimaryButtons search={search} />
-        </div>
+      <AdminPageShell
+        title='参数设置'
+        actions={<ConfigsPrimaryButtons search={search} />}
+      >
         <ConfigsTable
           data={configsData.list}
           total={configsData.total}
@@ -50,7 +33,7 @@ export function Configs() {
           search={search}
           navigate={navigate}
         />
-      </Main>
+      </AdminPageShell>
 
       <ConfigsDialogs />
     </ConfigsProvider>

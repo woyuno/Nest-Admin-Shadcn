@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { downloadBlob } from '@/lib/download-blob'
 import { handleServerError } from '@/lib/handle-server-error'
 import { Button } from '@/components/ui/button'
-import { ConfigDrawer } from '@/components/config-drawer'
 import {
   Dialog,
   DialogContent,
@@ -16,11 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { Header } from '@/components/layout/header'
-import { Main } from '@/components/layout/main'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
-import { ThemeSwitch } from '@/components/theme-switch'
+import { AdminPageShell } from '@/components/layout/admin-page-shell'
 import { PermissionGuard } from '@/views/auth/components/permission-guard'
 import {
   deleteTasks,
@@ -112,20 +107,9 @@ export function Tasks() {
 
   return (
     <>
-      <Header fixed>
-        <Search />
-        <div className='ms-auto flex items-center space-x-4'>
-          <ThemeSwitch />
-          <ConfigDrawer />
-          <ProfileDropdown />
-        </div>
-      </Header>
-
-      <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
-        <div className='flex flex-wrap items-end justify-between gap-2'>
-          <div>
-            <h2 className='text-2xl font-bold tracking-tight'>定时任务</h2>
-          </div>
+      <AdminPageShell
+        title='定时任务'
+        actions={
           <div className='flex flex-wrap gap-2'>
             <PermissionGuard permissions={['monitor:job:add']}>
               <Button
@@ -181,8 +165,8 @@ export function Tasks() {
               </Button>
             </PermissionGuard>
           </div>
-        </div>
-
+        }
+      >
         <TasksTable
           data={rows}
           total={total}
@@ -213,7 +197,7 @@ export function Tasks() {
             setDialog('logs')
           }}
         />
-      </Main>
+      </AdminPageShell>
 
       <TasksActionDialog
         currentRow={dialog === 'edit' ? editingRow : undefined}
