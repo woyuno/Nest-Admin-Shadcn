@@ -40,7 +40,7 @@ Nest-Admin-Shadcn/
 │  ├─ src/lib                    # 请求、工具、下载等基础能力
 │  └─ src/stores                 # Zustand 状态
 ├─ docs/                         # 设计、计划、模板文档
-├─ openspec/                     # OpenSpec 相关配置
+├─ openspec/                     # OpenSpec 配置骨架
 ├─ AGENTS.md                     # 给 agent 与协作者的真实约定
 └─ package.json                  # 根目录统一工作流命令
 ```
@@ -198,64 +198,18 @@ npm run lint:admin
 如果你更想按一页指引快速进入状态，直接看：
 
 - `docs/template/template-onboarding.md`
+- `docs/template/doc-map.md`
 
-## 模板约定
+## 开始扩展前先知道
 
-### 1. 后端默认没有 API 前缀
+下面 6 条是最容易踩坑的入口级提醒，更完整的真实约束见 `AGENTS.md`。
 
-开发环境下 `app.prefix` 为空，接口直接挂在根路径，例如：
-
-- `POST /login`
-- `GET /getInfo`
-- `GET /getRouters`
-- `GET /system/user/list`
-- `GET /monitor/job/list`
-
-不要默认假设存在 `/api`。
-
-### 2. 登录态不只依赖 JWT
-
-后端会同时检查：
-
-- `Authorization: Bearer <token>`
-- Redis 中的登录 token
-
-所以只改 JWT 而不处理 Redis 登录态，往往会出现“令牌看起来有效，但接口仍判定未登录”的情况。
-
-### 3. 菜单和页面不是单端控制
-
-前端菜单受两套信息共同影响：
-
-1. 后端 `GET /getRouters` 返回的菜单树
-2. 前端 `admin-shadcn/src/views/auth/lib/page-registry.ts` 的映射
-
-新增后台页面通常至少要同时处理：
-
-1. 后端菜单数据
-2. 前端路由文件
-3. `page-registry.ts`
-4. 页面内权限点
-
-### 4. 当前后端 ORM 统一使用 Prisma
-
-数据库变更的推荐顺序：
-
-1. 修改 `server/prisma/schema.prisma`
-2. 执行 Prisma migration
-3. 业务查询统一通过 `PrismaService`
-
-### 5. HTTP 查询参数与 Prisma 分页边界要显式转换
-
-HTTP query 进入 Nest 时默认是字符串，例如 `pageNum=1&pageSize=10` 实际拿到的是字符串值。
-
-这类参数在进入 Prisma `skip/take` 之前，必须显式转换成 `number`，不要把字符串直接传给 Prisma。
-
-### 6. 可直接复制的真代码样板位于 templates
-
-为了让新项目更容易继续 vibecoding，仓库额外提供了两套可直接复制改名的样板：
-
-- `templates/backend-crud`
-- `templates/frontend-crud`
+1. 后端开发环境默认没有 `/api` 前缀，接口直接挂在根路径。
+2. 登录态不是只看 JWT，还依赖 Redis 中的登录 token。
+3. 新增后台页面通常要同时改后端菜单、前端路由、`page-registry.ts` 和页面权限点。
+4. 数据模型统一以 `server/prisma/schema.prisma` 为准，业务查询统一通过 `PrismaService`。
+5. HTTP query 进入 Prisma 前要显式转成 `number`，不要把字符串直接传给 `skip/take` 等字段。
+6. `templates/backend-crud` 和 `templates/frontend-crud` 是给新项目复制改名用的真代码样板。
 
 ## 新增模块建议路径
 
@@ -327,7 +281,12 @@ npm run verify:template
 - Clerk 相关前端演示路由
 - 某些 demo 页面和占位页面
 
-如果你是基于这个仓库复制新项目，建议先保留它们，等主链路跑通后再清理。
+主登录链路仍然是本仓库后端的账号密码登录。如果你是基于这个仓库复制新项目，建议先保留这些演示能力，等主链路跑通后再清理。
+
+## OpenSpec 状态
+
+- 仓库当前保留了 `openspec/` 配置骨架
+- 如需启用完整的 OpenSpec 变更流，还需要先完成初始化
 
 ## 更多真实约定
 

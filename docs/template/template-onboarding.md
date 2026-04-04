@@ -7,12 +7,18 @@
 
 目标不是解释所有细节，而是让你在第一小时内走上正确路径。
 
-## 第 0 步：先读这 2 个文件
+## 第 0 步：先读这 3 个文件
 
 1. [README.md](/e:/ai-workspace/Nest-Admin-Shadcn/README.md)
 2. [AGENTS.md](/e:/ai-workspace/Nest-Admin-Shadcn/AGENTS.md)
+3. [template-smoke-checklist.md](/e:/ai-workspace/Nest-Admin-Shadcn/docs/template/template-smoke-checklist.md)
 
-`README.md` 负责讲模板全貌，`AGENTS.md` 负责讲真实约束和联动点。
+分工建议：
+
+- `README.md`：看模板全貌、启动方式、目录入口
+- `AGENTS.md`：看真实约束、联动点、改动护栏
+- `template-smoke-checklist.md`：看模板复制后的最小验收动作
+- `doc-map.md`：看不同问题应该先查哪份文档
 
 ## 第 1 步：准备本地环境
 
@@ -87,6 +93,11 @@ npm run dev:admin
 - 前端：`http://localhost:5173`
 - Swagger：`http://localhost:8080/swagger-ui/`
 
+启动后先额外确认两件事：
+
+- 前端 `VITE_API_BASE_URL` 确实指向 `http://localhost:8080`
+- 主登录链路使用的是本仓库后端账号密码，不是 Clerk 演示路由
+
 ## 第 6 步：做最小人工验收
 
 至少确认：
@@ -97,9 +108,7 @@ npm run dev:admin
 4. 定时任务页面可打开
 5. Swagger 可访问
 
-更细的清单见：
-
-- `docs/template/template-smoke-checklist.md`
+更细的清单见 [template-smoke-checklist.md](/e:/ai-workspace/Nest-Admin-Shadcn/docs/template/template-smoke-checklist.md)。
 
 ## 第 7 步：开始扩展新业务
 
@@ -121,3 +130,5 @@ npm run dev:admin
 3. 菜单接入不是只改前端路由，还要同步 `page-registry`
 4. HTTP query 进入 Prisma 前必须显式转 number
 5. 新页面尽量沿用现有 `views + routes + page-registry + AdminPageShell` 模式
+
+如果你准备引入 OpenSpec 工作流，也要先确认当前仓库只是保留了 `openspec/` 配置骨架，还没有完整初始化变更流。

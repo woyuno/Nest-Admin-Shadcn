@@ -1,5 +1,18 @@
 # AGENTS.md
 
+## 3 分钟摘要
+
+如果你刚接手这个仓库，先记住下面几件事：
+
+- 这是一个可复制的新项目后台模板，不是单纯的 UI 演示仓库
+- 后端开发环境默认没有 `/api` 前缀，接口直接挂在根路径
+- 登录态依赖 `JWT + Redis`，不要只改 JWT
+- 前端菜单链路至少涉及后端 `getRouters`、前端路由、`page-registry.ts`、页面权限点
+- 后端默认有 `JwtAuthGuard + RolesGuard + PermissionGuard` 三层守卫
+- 后端写接口默认要补 `@Operlog`，并同步检查 `operlog-coverage.spec.ts`
+- 数据库统一使用 Prisma，HTTP query 进入 Prisma 前注意 number 边界转换
+- 主登录流是本仓库后端账号密码登录，Clerk 路由只是演示保留
+
 ## 项目概览
 
 这是一个前后端分离的 Nest-Admin-Shadcn 仓库，目标不只是维护当前项目，也包括作为可复制的新项目后台模板。主要包含两个子应用：
@@ -142,6 +155,10 @@ HTTP 查询参数进入 Nest 时默认是字符串，例如：
 - 导出过滤条件
 - 依赖数字主键的 query 参数
 
+### 7. OpenSpec 当前还不是完整启用状态
+
+仓库当前保留了 `openspec/` 配置骨架，但如需使用完整的 OpenSpec 变更流，还需要先完成初始化，不要默认认为当前已经存在可直接使用的 changes 工作流。
+
 ## 强约束
 
 ### 1. 默认沿用仓库现有架构和实现方案
@@ -244,30 +261,9 @@ HTTP 查询参数进入 Nest 时默认是字符串，例如：
 
 1. 优先保持已有目录结构和技术栈，不做大规模替换。
 2. 新增业务模块时，先参考一个现有模块做等形扩展，不要重新发明一套分层。
-3. 修改菜单、权限、路由时，必须同时检查：
-   - 后端菜单数据
-   - 前端路由文件
-   - `page-registry.ts`
-   - 页面权限点
+3. 修改菜单、权限、路由时，必须同时检查后端菜单数据、前端路由文件、`page-registry.ts`、页面权限点。
 4. 改分页查询时，必须检查 HTTP query 到 Prisma 的 number 边界转换。
-5. agent 或新协作者在开始工作前，应优先读取：
-   - `README.md`
-   - `AGENTS.md`
-
-推荐的最小启动顺序：
-
-1. `npm run bootstrap`
-2. `npm run dev:server`
-3. `npm run dev:admin`
-4. `npm run verify:template`
-5. 打开登录页，确认 `VITE_API_BASE_URL` 指向 `8080`
-6. 验证登录、菜单、用户管理、定时任务、Swagger
-
-如果你是首次接手这个模板，建议优先顺序改为：
-
-1. 先读 `README.md`
-2. 再读 `AGENTS.md`
-3. 再看 `docs/template/template-onboarding.md`
+5. 新协作者或 agent 开始前，优先阅读 `README.md`、`AGENTS.md`、`docs/template/template-onboarding.md`。
 
 ## 验证建议
 
