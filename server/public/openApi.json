@@ -2442,327 +2442,6 @@
         ]
       }
     },
-    "/tool/gen/list": {
-      "get": {
-        "operationId": "ToolController_findAll",
-        "summary": "数据表列表",
-        "parameters": [
-          {
-            "name": "pageNum",
-            "required": true,
-            "in": "query",
-            "description": "当前分页",
-            "schema": {
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "pageSize",
-            "required": true,
-            "in": "query",
-            "description": "每页数量",
-            "schema": {
-              "default": 10,
-              "type": "number"
-            }
-          },
-          {
-            "name": "orderByColumn",
-            "required": false,
-            "in": "query",
-            "description": "排序字段",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "isAsc",
-            "required": false,
-            "in": "query",
-            "description": "排序规则",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "系统工具"
-        ],
-        "security": [
-          {
-            "Authorization": []
-          }
-        ]
-      }
-    },
-    "/tool/gen/db/list": {
-      "get": {
-        "operationId": "ToolController_genDbList",
-        "summary": "查询数据库列表",
-        "parameters": [
-          {
-            "name": "pageNum",
-            "required": true,
-            "in": "query",
-            "description": "当前分页",
-            "schema": {
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "pageSize",
-            "required": true,
-            "in": "query",
-            "description": "每页数量",
-            "schema": {
-              "default": 10,
-              "type": "number"
-            }
-          },
-          {
-            "name": "orderByColumn",
-            "required": false,
-            "in": "query",
-            "description": "排序字段",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "isAsc",
-            "required": false,
-            "in": "query",
-            "description": "排序规则",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "系统工具"
-        ],
-        "security": [
-          {
-            "Authorization": []
-          }
-        ]
-      }
-    },
-    "/tool/gen/importTable": {
-      "post": {
-        "operationId": "ToolController_genImportTable",
-        "summary": "导入表",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TableName"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "系统工具"
-        ],
-        "security": [
-          {
-            "Authorization": []
-          }
-        ]
-      }
-    },
-    "/tool/gen/synchDb/{tableName}": {
-      "get": {
-        "operationId": "ToolController_synchDb",
-        "summary": "同步表",
-        "parameters": [
-          {
-            "name": "tableName",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "系统工具"
-        ],
-        "security": [
-          {
-            "Authorization": []
-          }
-        ]
-      }
-    },
-    "/tool/gen/{id}": {
-      "get": {
-        "operationId": "ToolController_gen",
-        "summary": "查询表详细信息",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "系统工具"
-        ],
-        "security": [
-          {
-            "Authorization": []
-          }
-        ]
-      },
-      "delete": {
-        "operationId": "ToolController_remove",
-        "summary": "删除表数据",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "系统工具"
-        ],
-        "security": [
-          {
-            "Authorization": []
-          }
-        ]
-      }
-    },
-    "/tool/gen": {
-      "put": {
-        "operationId": "ToolController_genUpdate",
-        "summary": "修改代码生成信息",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GenTableUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "系统工具"
-        ],
-        "security": [
-          {
-            "Authorization": []
-          }
-        ]
-      }
-    },
-    "/tool/gen/batchGenCode/zip": {
-      "get": {
-        "operationId": "ToolController_batchGenCode",
-        "summary": "生成代码",
-        "parameters": [
-          {
-            "name": "tableNames",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "系统工具"
-        ],
-        "security": [
-          {
-            "Authorization": []
-          }
-        ]
-      }
-    },
-    "/tool/gen/preview/{id}": {
-      "get": {
-        "operationId": "ToolController_preview",
-        "summary": "查看代码",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "系统工具"
-        ],
-        "security": [
-          {
-            "Authorization": []
-          }
-        ]
-      }
-    },
     "/system/user/profile": {
       "get": {
         "operationId": "UserController_profile",
@@ -3265,7 +2944,73 @@
       "get": {
         "operationId": "JobController_list",
         "summary": "获取定时任务列表",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "pageNum",
+            "required": true,
+            "in": "query",
+            "description": "当前分页",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": true,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "orderByColumn",
+            "required": false,
+            "in": "query",
+            "description": "排序字段",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "isAsc",
+            "required": false,
+            "in": "query",
+            "description": "排序规则",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobName",
+            "required": true,
+            "in": "query",
+            "description": "任务名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobGroup",
+            "required": true,
+            "in": "query",
+            "description": "任务组名",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "description": "状态（0正常 1暂停）",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -5127,28 +4872,6 @@
           "userIds"
         ]
       },
-      "TableName": {
-        "type": "object",
-        "properties": {
-          "tableNames": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "tableNames"
-        ]
-      },
-      "GenTableUpdate": {
-        "type": "object",
-        "properties": {
-          "tableId": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "tableId"
-        ]
-      },
       "UpdateProfileDto": {
         "type": "object",
         "properties": {
@@ -5413,6 +5136,32 @@
       "ListJobDto": {
         "type": "object",
         "properties": {
+          "pageNum": {
+            "type": "number",
+            "description": "当前分页",
+            "default": 1
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "每页数量",
+            "default": 10
+          },
+          "params": {
+            "description": "时间范围",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateParamsDTO"
+              }
+            ]
+          },
+          "orderByColumn": {
+            "type": "string",
+            "description": "排序字段"
+          },
+          "isAsc": {
+            "type": "string",
+            "description": "排序规则"
+          },
           "jobName": {
             "type": "string",
             "description": "任务名称"
@@ -5427,6 +5176,8 @@
           }
         },
         "required": [
+          "pageNum",
+          "pageSize",
           "jobName",
           "jobGroup",
           "status"

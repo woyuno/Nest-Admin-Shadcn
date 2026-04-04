@@ -8,6 +8,9 @@
 /**/node_modules
 admin-start.log
 admin-start.err.log
+admin-dev.log
 server-start.log
 server-start.err.log
+server-dev.log
+admin-shadcn/src/routeTree.gen.ts
 .worktrees/

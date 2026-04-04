@@ -15,8 +15,28 @@ export class LoginlogService {
    * @returns
    */
   async create(createLoginlogDto: CreateLoginlogDto) {
+    const {
+      ipaddr,
+      userName,
+      loginLocation,
+      browser,
+      os,
+      msg,
+      status,
+      dateTime,
+    } = createLoginlogDto as CreateLoginlogDto & { dateTime?: string };
+
     return await this.prisma.sysLogininfor.create({
-      data: createLoginlogDto,
+      data: {
+        ipaddr,
+        userName,
+        loginLocation,
+        browser,
+        os,
+        msg,
+        status,
+        loginTime: dateTime ? new Date(dateTime) : undefined,
+      },
     });
   }
 
